@@ -501,6 +501,7 @@
   // 🔊 To swap the sound: rename your file to Alarm.mp3 and upload it
   //    to the same folder as this index.html in your GitHub repo
   const alarmAudio = document.getElementById('alarmAudioEl');
+  alarmAudio.loop = true;
 
   alarmAudio.addEventListener('canplaythrough', () => showToast('AUDIO READY', 'success'));
   alarmAudio.addEventListener('error', () => showToast('AUDIO ERROR — check Alarm.mp3 is in the repo', 'error'));
