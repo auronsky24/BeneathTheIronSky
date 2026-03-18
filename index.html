@@ -596,13 +596,6 @@
 
     startAlarmSound();
     triggerLIFXStrobe(true);
-
-    // Auto-stop after cycles complete (cycles × 500ms per cycle)
-    const autoStop = setTimeout(() => {
-      if (isFiring) endAlarm();
-    }, config.cycles * 500 + 500);
-
-    stopFiring = () => clearTimeout(autoStop);
   }
 
   function endAlarm() {
