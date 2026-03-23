@@ -641,10 +641,16 @@
   }
 
   async function lifxOff(selector) {
+    // Stop any running effect first, then power off cleanly
     await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/off`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ power_off: false })  // stop effects but leave light on
+      body: JSON.stringify({ power_off: false })
+    }).catch(() => {});
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ power: 'off', duration: 0 })
     }).catch(() => {});
   }
 
