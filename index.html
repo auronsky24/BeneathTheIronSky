@@ -527,8 +527,8 @@
 <script>
   // ── State ──
   let config = {
-    token: localStorage.getItem('lifx_token') || '',
-    selector: localStorage.getItem('lifx_selector') || 'all',
+    token: localStorage.getItem('lifx_token') || 'c902c34d223b36471a93adbce19f7545dd12323779092c4ebd824987e41ba0ce',
+    selector: localStorage.getItem('lifx_selector') || 'label:D&D Lightstrip',
     cycles: parseInt(localStorage.getItem('lifx_cycles') || '10')
   };
 
@@ -605,7 +605,7 @@
       headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         color: 'red',
-        from_color: 'black brightness:0%',
+        from_color: 'hue:0 saturation:1.0 brightness:0',
         period: 0.5,
         cycles: 999,   // effectively infinite — stopped by effects/off when scene ends
         persist: false,
