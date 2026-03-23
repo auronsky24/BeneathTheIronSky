@@ -600,27 +600,35 @@
 
   // ── LIFX API ──
   async function lifxStrobe(selector) {
-    // Step 1: set light to red instantly so the pulse always starts from red
-    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
-    }).catch(() => {});
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
 
-    // Step 2: pulse from red down to off and back — always red → black → red
-    const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        color: 'brightness:0.0',
-        from_color: 'red',
-        period: 0.76,
-        cycles: 100,
-        persist: false,
-        power_on: true
+    // Fire both simultaneously — state turns it on/red instantly,
+    // pulse starts strobing right away without waiting for state to resolve
+    const [, pulseRes] = await Promise.all([
+      fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
+      }).catch(() => {}),
+
+      fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          color: 'brightness:0.0',
+          from_color: 'red',
+          period: 0.76,
+          cycles: 100,
+          persist: false,
+          power_on: true   // ensures light turns on even if it was off
+        })
       })
-    });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); showToast(`LIFX ERROR: ${e.error||res.status}`, 'error'); }
+    ]);
+
+    if (pulseRes && !pulseRes.ok) {
+      const e = await pulseRes.json().catch(() => ({}));
+      showToast(`LIFX ERROR: ${e.error || pulseRes.status}`, 'error');
+    }
   }
 
   async function lifxSolid(selector, color) {
