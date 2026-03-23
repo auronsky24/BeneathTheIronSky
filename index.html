@@ -600,12 +600,20 @@
 
   // ── LIFX API ──
   async function lifxStrobe(selector) {
+    // Step 1: set light to red instantly so the pulse always starts from red
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
+    }).catch(() => {});
+
+    // Step 2: pulse from red down to off and back — always red → black → red
     const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        color: 'red',
-        from_color: 'brightness:0',
+        color: 'brightness:0.0',
+        from_color: 'red',
         period: 0.76,
         cycles: 100,
         persist: false,
