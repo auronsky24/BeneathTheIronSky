@@ -122,6 +122,14 @@
     gap: 12px;
   }
 
+  .ctrl-btn.reset {
+    border-color: #2a2a2a;
+  }
+  .ctrl-btn.reset .btn-label { color: var(--amber); text-shadow: 0 0 16px rgba(255,170,0,0.5); font-size: 22px; }
+  .ctrl-btn.reset .btn-sub   { color: #554400; }
+  .ctrl-btn.reset::before    { background: radial-gradient(ellipse at center, rgba(255,170,0,0.15) 0%, transparent 70%); }
+  .ctrl-btn.reset.active::before { opacity: 1; }
+
   /* ── Control Button ── */
   .ctrl-btn {
     position: relative;
@@ -155,8 +163,6 @@
   /* Alarm button */
   .ctrl-btn.alarm {
     border-color: var(--red-dim);
-    grid-column: 1 / -1; /* Full width */
-    grid-row: 1;
   }
 
   .ctrl-btn.alarm::before {
@@ -453,11 +459,18 @@
 
   <div class="grid">
 
-    <!-- ALARM BUTTON -->
+    <!-- ALARM BUTTON (half width) -->
     <button class="ctrl-btn scene-btn alarm" id="btn-alarm" data-scene="alarm" ontouchstart="handleScene(event, 'alarm')" onclick="handleScene(event, 'alarm')">
       <div class="btn-icon">🚨</div>
       <div class="btn-label">ALARM</div>
       <div class="btn-sub">STROBE RED · ALERT TONE</div>
+    </button>
+
+    <!-- RESET BUTTON -->
+    <button class="ctrl-btn reset" id="btn-reset" ontouchstart="handleReset(event)" onclick="handleReset(event)">
+      <div class="btn-icon">🔄</div>
+      <div class="btn-label">RESET</div>
+      <div class="btn-sub">CLEAR LIGHT STATE</div>
     </button>
 
     <!-- SOLID RED -->
@@ -599,36 +612,43 @@
   };
 
   // ── LIFX API ──
-  async function lifxStrobe(selector) {
-    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+  let strobeTimer = null;
 
-    // Fire both simultaneously — state turns it on/red instantly,
-    // pulse starts strobing right away without waiting for state to resolve
-    const [, pulseRes] = await Promise.all([
+  async function lifxStrobeCycle(selector) {
+    // Each call fires a short 4-cycle burst — avoids accumulating hundreds of
+    // queued cycles in LIFX firmware which causes the buggy zone-flicker
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+    await Promise.all([
       fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
-        method: 'PUT',
-        headers,
+        method: 'PUT', headers,
         body: JSON.stringify({ color: 'red brightness:1.0', power: 'on', duration: 0 })
       }).catch(() => {}),
-
       fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
-        method: 'POST',
-        headers,
+        method: 'POST', headers,
         body: JSON.stringify({
           color: 'brightness:0.0',
           from_color: 'red',
           period: 0.76,
-          cycles: 100,
+          cycles: 4,        // short burst — re-issued every 4 cycles to keep firmware clean
           persist: false,
-          power_on: true   // ensures light turns on even if it was off
+          power_on: true
         })
-      })
+      }).catch(() => {})
     ]);
+  }
 
-    if (pulseRes && !pulseRes.ok) {
-      const e = await pulseRes.json().catch(() => ({}));
-      showToast(`LIFX ERROR: ${e.error || pulseRes.status}`, 'error');
-    }
+  async function lifxStrobe(selector) {
+    if (strobeTimer) { clearInterval(strobeTimer); strobeTimer = null; }
+    await lifxStrobeCycle(selector);
+    // Re-fire every (4 cycles × 760ms) = 3040ms to keep it going indefinitely
+    strobeTimer = setInterval(() => {
+      if (activeScene === 'alarm') lifxStrobeCycle(selector);
+      else { clearInterval(strobeTimer); strobeTimer = null; }
+    }, 3040);
+  }
+
+  function lifxStrobeStop() {
+    if (strobeTimer) { clearInterval(strobeTimer); strobeTimer = null; }
   }
 
   async function lifxSolid(selector, color) {
@@ -641,15 +661,15 @@
   }
 
   async function lifxOff(selector) {
-    // Stop any running effect first, then power off cleanly
+    lifxStrobeStop();
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+    // Stop effects then power off cleanly — two calls ensure no leftover firmware state
     await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/off`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers,
       body: JSON.stringify({ power_off: false })
     }).catch(() => {});
     await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      method: 'PUT', headers,
       body: JSON.stringify({ power: 'off', duration: 0 })
     }).catch(() => {});
   }
@@ -718,6 +738,61 @@
     // Only call lifxOff if we are truly turning off (not switching to another scene)
     // This prevents the off command from racing and killing the new scene's lights
     if (config.token && !switching) lifxOff(selector);
+  }
+
+  // ── Reset Handler ──
+  let resetTouchHandled = false;
+
+  async function handleReset(e) {
+    if (e.type === 'touchstart') { resetTouchHandled = true; }
+    if (e.type === 'click' && resetTouchHandled) { resetTouchHandled = false; return; }
+    e.preventDefault();
+
+    // Clear any active scene UI
+    if (activeScene) {
+      const btn = document.getElementById(`btn-${activeScene}`);
+      if (btn) btn.classList.remove('active', 'firing');
+      document.getElementById('flashOverlay').classList.remove('active');
+      if (activeScene === 'alarm') {
+        btn.querySelector('.btn-sub').textContent = scenes['alarm'].label;
+      }
+      activeScene = null;
+    }
+
+    // Stop audio
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+
+    // Stop strobe timer
+    lifxStrobeStop();
+
+    if (!config.token) { showToast('NO TOKEN', 'error'); return; }
+
+    const selector = encodeURIComponent(config.selector || 'all');
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    showToast('RESETTING LIGHT...', '');
+
+    // Full reset sequence: stop effects → wait → power cycle → restore to white
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/off`, {
+      method: 'POST', headers, body: JSON.stringify({ power_off: false })
+    }).catch(() => {});
+
+    await new Promise(r => setTimeout(r, 500));
+
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ power: 'off', duration: 0 })
+    }).catch(() => {});
+
+    await new Promise(r => setTimeout(r, 500));
+
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ color: 'white saturation:0 brightness:1.0', power: 'on', duration: 1.0 })
+    }).catch(() => {});
+
+    showToast('LIGHT RESET ✓', 'success');
   }
 
   // ── Settings ──
