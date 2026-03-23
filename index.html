@@ -605,9 +605,8 @@
       headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         color: 'red',
-        from_color: 'hue:0 saturation:1.0 brightness:0',
-        period: 0.5,
-        cycles: 999,   // effectively infinite — stopped by effects/off when scene ends
+        period: 0.76,
+        cycles: 100,
         persist: false,
         power_on: true
       })
@@ -643,15 +642,15 @@
 
     if (activeScene === sceneId) {
       // Tapping the active button turns everything off
-      deactivateScene(sceneId);
+      deactivateScene(sceneId, false);
     } else {
-      // Override: deactivate whatever is running, then start new scene
-      if (activeScene) deactivateScene(activeScene);
+      // Override: deactivate UI only (no lifxOff), let new scene take over lights directly
+      if (activeScene) deactivateScene(activeScene, true);
       activateScene(sceneId);
     }
   }
 
-  function activateScene(sceneId) {
+  function activateScene(sceneId, skipLightsOff = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
@@ -672,13 +671,13 @@
       alarmAudio.play().catch(err => showToast(`PLAY ERROR: ${err.message}`, 'error'));
     }
 
-    // Lights
+    // Lights — if skipLightsOff we go straight to the new state with no off in between
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
     if (scene.light === 'strobe') lifxStrobe(selector);
     if (scene.light === 'solid')  lifxSolid(selector, scene.color);
   }
 
-  function deactivateScene(sceneId) {
+  function deactivateScene(sceneId, switching = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
@@ -693,8 +692,9 @@
     alarmAudio.pause();
     alarmAudio.currentTime = 0;
 
-    // Stop lights
-    if (config.token) lifxOff(selector);
+    // Only call lifxOff if we are truly turning off (not switching to another scene)
+    // This prevents the off command from racing and killing the new scene's lights
+    if (config.token && !switching) lifxOff(selector);
   }
 
   // ── Settings ──
