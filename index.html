@@ -608,7 +608,7 @@
       fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
+        body: JSON.stringify({ color: 'red', brightness: 1.0, power: 'on', duration: 0 })
       }).catch(() => {}),
 
       fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
