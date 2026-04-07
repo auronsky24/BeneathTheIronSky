@@ -658,18 +658,27 @@
   let activeScene = null;
   let touchHandled = false;
 
-  function handleScene(e, sceneId) {
+  let transitionInProgress = false;
+
+  async function handleScene(e, sceneId) {
     if (e.type === 'touchstart') { touchHandled = true; }
     if (e.type === 'click' && touchHandled) { touchHandled = false; return; }
     e.preventDefault();
 
-    if (activeScene === sceneId) {
-      // Tapping the active button turns everything off
-      deactivateScene(sceneId, false);
-    } else {
-      // Override: deactivate UI only (no lifxOff), let new scene take over lights directly
-      if (activeScene) deactivateScene(activeScene, true);
-      activateScene(sceneId);
+    if (transitionInProgress) return;
+    transitionInProgress = true;
+
+    try {
+      if (activeScene === sceneId) {
+        // Tapping the active button turns everything off
+        await deactivateScene(sceneId, false);
+      } else {
+        // Override: deactivate UI only (no lifxOff), let new scene take over lights directly
+        if (activeScene) await deactivateScene(activeScene, true);
+        await activateScene(sceneId);
+      }
+    } finally {
+      transitionInProgress = false;
     }
   }
 
