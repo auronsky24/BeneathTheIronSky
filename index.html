@@ -510,6 +510,12 @@
     </div>
 
     <div class="field">
+      <label>Second Light Selector</label>
+      <input type="text" id="selector2Input" placeholder="e.g. label:D&D Lightstrip 2" autocomplete="off">
+      <div class="hint">Optional second light strip to control at the same time.</div>
+    </div>
+
+    <div class="field">
       <label>Strobe Cycles</label>
       <input type="number" id="cyclesInput" placeholder="10" min="1" max="60" value="10">
       <div class="hint">How many times the light flashes (1–60)</div>
@@ -530,6 +536,7 @@
   let config = {
     token: localStorage.getItem('lifx_token') || 'c902c34d223b36471a93adbce19f7545dd12323779092c4ebd824987e41ba0ce',
     selector: localStorage.getItem('lifx_selector') || 'label:D&D Lightstrip',
+    selector2: localStorage.getItem('lifx_selector2') || 'label:D&D Lightstrip 2',
     cycles: parseInt(localStorage.getItem('lifx_cycles') || '10')
   };
 
@@ -600,6 +607,12 @@
   };
 
   // ── LIFX API ──
+  function getSelectors() {
+    const selectors = [config.selector || 'all'];
+    if (config.selector2) selectors.push(config.selector2);
+    return [...new Set(selectors)].map(s => encodeURIComponent(s));
+  }
+
   async function lifxStrobe(selector) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
     const [, pulseRes] = await Promise.all([
@@ -617,7 +630,7 @@
           persist: false,
           power_on: true
         })
-      })
+      }).catch(() => {})
     ]);
     if (pulseRes && !pulseRes.ok) {
       const e = await pulseRes.json().catch(() => ({}));
@@ -630,8 +643,8 @@
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ color, power: 'on', duration: 0.3 })
-    });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); showToast(`LIFX ERROR: ${e.error||res.status}`, 'error'); }
+    }).catch(() => null);
+    if (res && !res.ok) { const e = await res.json().catch(() => ({})); showToast(`LIFX ERROR: ${e.error || res.status}`, 'error'); }
   }
 
   async function lifxOff(selector) {
@@ -665,11 +678,10 @@
     }
   }
 
-  function activateScene(sceneId, skipLightsOff = false) {
+  async function activateScene(sceneId, skipLightsOff = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
-    const selector = encodeURIComponent(config.selector || 'all');
 
     activeScene = sceneId;
     btn.classList.add('active');
@@ -688,15 +700,15 @@
 
     // Lights — if skipLightsOff we go straight to the new state with no off in between
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
-    if (scene.light === 'strobe') lifxStrobe(selector);
-    if (scene.light === 'solid')  lifxSolid(selector, scene.color);
+    const selectors = getSelectors();
+    if (scene.light === 'strobe') await Promise.all(selectors.map(sel => lifxStrobe(sel)));
+    if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
   }
 
-  function deactivateScene(sceneId, switching = false) {
+  async function deactivateScene(sceneId, switching = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
-    const selector = encodeURIComponent(config.selector || 'all');
 
     activeScene = null;
     btn.classList.remove('active', 'firing');
@@ -709,13 +721,17 @@
 
     // Only call lifxOff if we are truly turning off (not switching to another scene)
     // This prevents the off command from racing and killing the new scene's lights
-    if (config.token && !switching) lifxOff(selector);
+    if (config.token && !switching) {
+      const selectors = getSelectors();
+      await Promise.all(selectors.map(sel => lifxOff(sel)));
+    }
   }
 
   // ── Settings ──
   function openSettings() {
     document.getElementById('tokenInput').value = config.token;
     document.getElementById('selectorInput').value = config.selector;
+    document.getElementById('selector2Input').value = config.selector2;
     document.getElementById('cyclesInput').value = config.cycles;
     document.getElementById('modalBg').classList.add('open');
   }
@@ -727,11 +743,13 @@
   function saveSettings() {
     const token = document.getElementById('tokenInput').value.trim();
     const selector = document.getElementById('selectorInput').value.trim() || 'all';
+    const selector2 = document.getElementById('selector2Input').value.trim();
     const cycles = parseInt(document.getElementById('cyclesInput').value) || 10;
 
-    config = { token, selector, cycles };
+    config = { token, selector, selector2, cycles };
     localStorage.setItem('lifx_token', token);
     localStorage.setItem('lifx_selector', selector);
+    localStorage.setItem('lifx_selector2', selector2);
     localStorage.setItem('lifx_cycles', cycles);
 
     updateStatusDot();
