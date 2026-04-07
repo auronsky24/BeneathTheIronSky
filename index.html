@@ -615,26 +615,32 @@
 
   async function lifxStrobe(selector) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
-    const [, pulseRes] = await Promise.all([
-      fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
-        method: 'PUT', headers,
-        body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
-      }).catch(() => {}),
-      fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          color: 'brightness:0.0',
-          from_color: 'red',
-          period: 0.76,
-          cycles: 100,
-          persist: false,
-          power_on: true
-        })
-      }).catch(() => {})
-    ]);
-    if (pulseRes && !pulseRes.ok) {
-      const e = await pulseRes.json().catch(() => ({}));
-      showToast(`LIFX ERROR: ${e.error || pulseRes.status}`, 'error');
+    const stateRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ color: 'red', power: 'on', duration: 0 })
+    }).catch(() => null);
+
+    if (!stateRes || !stateRes.ok) {
+      const e = stateRes ? await stateRes.json().catch(() => ({})) : {};
+      showToast(`LIFX ERROR: ${e.error || 'STATE FAILED'}`, 'error');
+      return;
+    }
+
+    const pulseRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        color: 'brightness:0.0',
+        from_color: 'red',
+        period: 0.76,
+        cycles: config.cycles || 10,
+        persist: false,
+        power_on: true
+      })
+    }).catch(() => null);
+
+    if (!pulseRes || !pulseRes.ok) {
+      const e = pulseRes ? await pulseRes.json().catch(() => ({})) : {};
+      showToast(`LIFX ERROR: ${e.error || 'PULSE FAILED'}`, 'error');
     }
   }
 
