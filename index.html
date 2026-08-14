@@ -119,7 +119,7 @@
   .grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     grid-template-rows: 1.5fr repeat(3, 1fr);
     gap: 12px;
   }
@@ -180,9 +180,9 @@
   }
 
   .ctrl-btn.alarm .btn-label {
-    font-size: 26px;
+    font-size: 20px;
     font-weight: 900;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
     color: var(--red);
     text-shadow: 0 0 20px var(--red), 0 0 40px var(--red-glow);
     text-transform: uppercase;
@@ -240,9 +240,9 @@
   }
 
   .ctrl-btn.lasers .btn-label {
-    font-size: 26px;
+    font-size: 20px;
     font-weight: 900;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
     color: var(--green);
     text-shadow: 0 0 20px var(--green), 0 0 40px var(--green-glow);
     text-transform: uppercase;
@@ -273,6 +273,90 @@
   }
 
   .ctrl-btn.lasers.firing::after { opacity: 1; animation: scanline 1s linear infinite; }
+
+  /* Shields button */
+  .ctrl-btn.shields {
+    border-color: #003580;
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ctrl-btn.shields::before {
+    background: radial-gradient(ellipse at center, rgba(30,100,255,0.4) 0%, transparent 70%);
+  }
+
+  .ctrl-btn.shields:active::before,
+  .ctrl-btn.shields.firing::before { opacity: 1; }
+
+  .ctrl-btn.shields .btn-icon {
+    font-size: 48px;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px #4d9fff);
+    transition: filter 0.1s;
+  }
+
+  .ctrl-btn.shields.firing .btn-icon {
+    animation: iconPulseBlue 0.5s ease-in-out infinite;
+  }
+
+  .ctrl-btn.shields .btn-label {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: #4d9fff;
+    text-shadow: 0 0 20px #4d9fff, 0 0 40px rgba(30,100,255,0.4);
+    text-transform: uppercase;
+    transition: text-shadow 0.1s;
+  }
+
+  .ctrl-btn.shields.firing .btn-label {
+    animation: labelFlashBlue 0.5s ease-in-out infinite;
+  }
+
+  .ctrl-btn.shields .btn-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: #003580;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* Corner accent lines on shields button */
+  .ctrl-btn.shields::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4d9fff, transparent);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+
+  .ctrl-btn.shields.firing::after { opacity: 1; animation: scanline 1s linear infinite; }
+
+  /* Theme buttons — gradient border approximating each LIFX theme's palette */
+  .ctrl-btn.theme-btn {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      var(--theme-gradient) border-box;
+  }
+
+  .ctrl-btn.theme-btn::before {
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.12) 0%, transparent 70%);
+  }
+
+  .ctrl-btn.theme-btn:active::before,
+  .ctrl-btn.theme-btn.active::before { opacity: 1; }
+
+  .ctrl-btn.theme-btn .btn-label { color: #f0f0f0; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
+  .ctrl-btn.theme-btn .btn-sub   { color: var(--text-dim); }
+
+  .ctrl-btn.theme-btn.active { box-shadow: 0 0 18px rgba(255,255,255,0.25); }
+
+  .ctrl-btn.theme-mellow     { --theme-gradient: linear-gradient(135deg, hsl(235,100%,67%), hsl(284,100%,67%), hsl(329,100%,67%)); grid-column: 3; grid-row: 2; }
+  .ctrl-btn.theme-tranquil   { --theme-gradient: linear-gradient(135deg, hsl(236,100%,80.5%), hsl(125,100%,80.5%), hsl(11,100%,80.5%)); grid-column: 3; grid-row: 3; }
+  .ctrl-btn.theme-energizing { --theme-gradient: linear-gradient(135deg, hsl(210,100%,65.5%), hsl(157,100%,65%), hsl(124,100%,66%)); grid-column: 3; grid-row: 4; }
 
   /* Empty/placeholder buttons */
   .ctrl-btn.empty {
@@ -503,6 +587,16 @@
     50% { text-shadow: 0 0 40px var(--green), 0 0 80px var(--green-glow); opacity: 0.7; }
   }
 
+  @keyframes iconPulseBlue {
+    0%, 100% { filter: drop-shadow(0 0 12px #4d9fff); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 30px #4d9fff); transform: scale(1.1); }
+  }
+
+  @keyframes labelFlashBlue {
+    0%, 100% { text-shadow: 0 0 20px #4d9fff, 0 0 40px rgba(30,100,255,0.4); opacity: 1; }
+    50% { text-shadow: 0 0 40px #4d9fff, 0 0 80px rgba(30,100,255,0.4); opacity: 0.7; }
+  }
+
   @keyframes screenFlash {
     0%, 100% { opacity: 0; }
     50% { opacity: 1; }
@@ -549,6 +643,13 @@
       <div class="btn-sub">STROBE GREEN · LASER SFX</div>
     </button>
 
+    <!-- SHIELDS BUTTON -->
+    <button class="ctrl-btn scene-btn shields" id="btn-shields" data-scene="shields" ontouchstart="handleScene(event, 'shields')" onclick="handleScene(event, 'shields')">
+      <div class="btn-icon">🛡️</div>
+      <div class="btn-label">SHIELDS</div>
+      <div class="btn-sub">STROBE BLUE · SHIELD TONE</div>
+    </button>
+
 
     <!-- SOLID RED -->
     <button class="ctrl-btn scene-btn solid-red" id="btn-red" data-scene="red" ontouchstart="handleScene(event, 'red')" onclick="handleScene(event, 'red')">
@@ -590,6 +691,27 @@
       <div class="btn-icon">🟡</div>
       <div class="btn-label">YELLOW</div>
       <div class="btn-sub">SOLID YELLOW</div>
+    </button>
+
+    <!-- THEME: MELLOW -->
+    <button class="ctrl-btn scene-btn theme-btn theme-mellow" id="btn-mellow" data-scene="mellow" ontouchstart="handleScene(event, 'mellow')" onclick="handleScene(event, 'mellow')">
+      <div class="btn-icon">🌙</div>
+      <div class="btn-label">MELLOW</div>
+      <div class="btn-sub">THEME · MELLOW</div>
+    </button>
+
+    <!-- THEME: TRANQUIL -->
+    <button class="ctrl-btn scene-btn theme-btn theme-tranquil" id="btn-tranquil" data-scene="tranquil" ontouchstart="handleScene(event, 'tranquil')" onclick="handleScene(event, 'tranquil')">
+      <div class="btn-icon">🌊</div>
+      <div class="btn-label">TRANQUIL</div>
+      <div class="btn-sub">THEME · TRANQUIL</div>
+    </button>
+
+    <!-- THEME: ENERGIZING -->
+    <button class="ctrl-btn scene-btn theme-btn theme-energizing" id="btn-energizing" data-scene="energizing" ontouchstart="handleScene(event, 'energizing')" onclick="handleScene(event, 'energizing')">
+      <div class="btn-icon">⚡</div>
+      <div class="btn-label">ENERGIZING</div>
+      <div class="btn-sub">THEME · ENERGIZING</div>
     </button>
 
   </div>
@@ -686,6 +808,13 @@
       light:     'strobe',
       color:     'green',
     },
+    shields: {
+      label:     'STROBE BLUE · SHIELD TONE',
+      playAudio: true,
+      audioSrc:  'shields.mp3',
+      light:     'strobe',
+      color:     'blue',
+    },
     red: {
       label:     'SOLID RED',
       playAudio: false,                 // ← set to true and add audioSrc to add sound
@@ -728,6 +857,30 @@
       light:     'solid',
       color:     'yellow saturation:1.0 brightness:1.0',
     },
+    // LIFX's cloud API has no endpoint to activate a built-in Theme by name.
+    // Each theme paints a real static gradient across the strip's own zones
+    // using custom hue/saturation colors.
+    mellow: {
+      label:     'THEME · MELLOW',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradient',
+      palette:   ['hue:235 saturation:0.66', 'hue:284 saturation:0.66', 'hue:329 saturation:0.66'],
+    },
+    tranquil: {
+      label:     'THEME · TRANQUIL',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradient',
+      palette:   ['hue:236 saturation:0.39', 'hue:125 saturation:0.39', 'hue:11 saturation:0.39'],
+    },
+    energizing: {
+      label:     'THEME · ENERGIZING',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradient',
+      palette:   ['hue:210 saturation:0.69', 'hue:157 saturation:0.70', 'hue:124 saturation:0.68'],
+    },
   };
 
   // ── LIFX API ──
@@ -757,6 +910,42 @@
     }
   }
 
+  // Paints a static multi-color gradient across a multizone lightstrip's real
+  // zones (the "morph" effect only works on Tile/Candle matrix devices, not
+  // linear strips like this one — so we split the strip's actual zones and
+  // set each band directly instead).
+  const zoneCountCache = {};
+
+  async function lifxGradient(selector, palette) {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    let zoneCount = zoneCountCache[selector];
+    if (!zoneCount) {
+      const getRes = await fetch(`https://api.lifx.com/v1/lights/${selector}`, { headers }).catch(() => null);
+      if (!getRes || !getRes.ok) return; // API unreachable right now — stay quiet, like the other buttons
+      const lights = await getRes.json().catch(() => []);
+      const light = lights[0];
+      if (!light || !light.connected) return; // no matching light, or it's offline — nothing to paint
+      zoneCount = light.zones?.count;
+      if (!zoneCount) { showToast('LIFX ERROR: LIGHT HAS NO ZONES', 'error'); return; }
+      zoneCountCache[selector] = zoneCount;
+    }
+
+    const bandSize = Math.ceil(zoneCount / palette.length);
+    const puts = palette.map((color, i) => {
+      const start = i * bandSize;
+      const end = Math.min(start + bandSize - 1, zoneCount - 1);
+      if (start > end) return null;
+      return fetch(`https://api.lifx.com/v1/lights/${selector}|${start}-${end}/state`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ color, brightness: 1, power: 'on', duration: 0.5 })
+      });
+    }).filter(Boolean);
+
+    const results = await Promise.all(puts);
+    if (results.some(r => !r.ok)) showToast('LIFX ERROR: GRADIENT PARTIALLY FAILED', 'error');
+  }
+
   async function lifxSolid(selector, color) {
     const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT',
@@ -782,6 +971,7 @@
   const flashColors = {
     red:   'rgba(255, 26, 26, 0.15)',
     green: 'rgba(0, 255, 136, 0.15)',
+    blue:  'rgba(30, 100, 255, 0.15)',
   };
   let activeScene = null;
   let touchHandled = false;
@@ -836,6 +1026,7 @@
     const selectors = getSelectors();
     if (scene.light === 'strobe') await Promise.all(selectors.map(sel => lifxStrobe(sel, scene.color)));
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
+    if (scene.light === 'gradient') await Promise.all(selectors.map(sel => lifxGradient(sel, scene.palette)));
   }
 
   async function deactivateScene(sceneId, switching = false) {
