@@ -952,8 +952,10 @@
       label:     'THEME · TRANQUIL',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradient',
-      palette:   ['hue:236 saturation:0.39', 'hue:125 saturation:0.39', 'hue:11 saturation:0.39'],
+      light:     'gradientSmooth',
+      // Matches the LIFX app's Colors tab → Gradient style, Custom stops —
+      // smoothly blended per-zone rather than banded like the other themes.
+      stops:     [{ hue: 244, saturation: 30 }, { hue: 18, saturation: 30 }, { hue: 133, saturation: 30 }],
     },
     energizing: {
       label:     'THEME · ENERGIZING',
@@ -1056,6 +1058,65 @@
 
     const results = await Promise.all(puts);
     if (results.some(r => !r.ok)) showToast('LIFX ERROR: GRADIENT PARTIALLY FAILED', 'error');
+  }
+
+  // Shortest-arc hue interpolation (hue is circular, 0-360) — going the long
+  // way around would pass through unrelated colors instead of blending
+  // directly between two stops, same as the LIFX app's own gradient picker.
+  function lerpHue(h1, h2, t) {
+    const diff = ((h2 - h1 + 540) % 360) - 180;
+    return (h1 + diff * t + 360) % 360;
+  }
+
+  // Matches the LIFX app's Colors tab "Gradient" style (Custom stops) rather
+  // than lifxGradient's flat bands: sets every individual zone to its own
+  // interpolated color between the given stops, so the blend is smooth
+  // instead of stepped. Costs one API call per zone (a one-time paint, not
+  // a repeating effect, so that's an acceptable tradeoff for the smoothness).
+  // Paints bandCount bands (not one call per individual zone) with colors
+  // interpolated at each band's midpoint, each band awaited in sequence —
+  // firing many concurrent writes to the same physical strip is the same
+  // race we've hit before (the laser meteor's zone painting, the Reset
+  // button's power cycle): some land, some get dropped. Every request over
+  // the cloud API is its own round-trip (there's no single "set all zones"
+  // call like the LIFX app gets over the LAN protocol), so fewer, larger
+  // bands trade a bit of blend precision for a much shorter total wait.
+  async function lifxGradientSmooth(selector, stops, bandCount = 8) {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    const zoneCount = await getZoneCount(selector);
+    if (!zoneCount) return;
+
+    const bands = Math.min(bandCount, zoneCount);
+    const bandSize = Math.ceil(zoneCount / bands);
+    const segments = stops.length - 1;
+    let anyFailed = false;
+
+    for (let b = 0; b < bands; b++) {
+      const start = b * bandSize;
+      const end = Math.min(start + bandSize - 1, zoneCount - 1);
+      if (start > end) break;
+
+      const mid = (start + end) / 2;
+      const t = zoneCount > 1 ? mid / (zoneCount - 1) : 0;
+      const segPos = Math.min(t * segments, segments - 0.0001);
+      const segIndex = Math.floor(segPos);
+      const segT = segPos - segIndex;
+      const a = stops[segIndex], c = stops[segIndex + 1];
+      const hue = lerpHue(a.hue, c.hue, segT);
+      const saturation = (a.saturation + (c.saturation - a.saturation) * segT) / 100;
+
+      const res = await fetch(`https://api.lifx.com/v1/lights/${selector}|${start}-${end}/state`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({
+          color: `hue:${hue.toFixed(1)} saturation:${saturation.toFixed(3)} kelvin:9000`,
+          brightness: 1, power: 'on', duration: 0.5
+        })
+      }).catch(() => null);
+      if (!res || !res.ok) anyFailed = true;
+    }
+
+    if (anyFailed) showToast('LIFX ERROR: GRADIENT PARTIALLY FAILED', 'error');
   }
 
   // Paints a small bright head near the start of a multizone strip and blacks
@@ -1331,6 +1392,7 @@
     }
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
     if (scene.light === 'gradient') await Promise.all(selectors.map(sel => lifxGradient(sel, scene.palette)));
+    if (scene.light === 'gradientSmooth') await Promise.all(selectors.map(sel => lifxGradientSmooth(sel, scene.stops)));
   }
 
   async function deactivateScene(sceneId, switching = false, keepLightsOn = false) {
