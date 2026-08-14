@@ -120,7 +120,7 @@
     flex: 1;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: 1.5fr repeat(3, 1fr);
     gap: 12px;
   }
 
@@ -445,32 +445,42 @@
   .toast.error { border-color: var(--red); color: var(--red); }
 
   /* ── Color Scene Buttons ── */
-  .ctrl-btn.solid-red   { border-color: #8b0000; }
-  .ctrl-btn.solid-white { border-color: #555; }
-  .ctrl-btn.solid-blue  { border-color: #003580; }
-  .ctrl-btn.solid-green { border-color: #004d1a; }
+  .ctrl-btn.solid-red    { border-color: #8b0000; }
+  .ctrl-btn.solid-white  { border-color: #555; }
+  .ctrl-btn.solid-blue   { border-color: #003580; }
+  .ctrl-btn.solid-green  { border-color: #004d1a; }
+  .ctrl-btn.solid-purple { border-color: #4b0082; }
+  .ctrl-btn.solid-yellow { border-color: #806600; }
 
-  .ctrl-btn.solid-red::before   { background: radial-gradient(ellipse at center, rgba(255,26,26,0.3) 0%, transparent 70%); }
-  .ctrl-btn.solid-white::before { background: radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, transparent 70%); }
-  .ctrl-btn.solid-blue::before  { background: radial-gradient(ellipse at center, rgba(30,100,255,0.3) 0%, transparent 70%); }
-  .ctrl-btn.solid-green::before { background: radial-gradient(ellipse at center, rgba(0,255,100,0.25) 0%, transparent 70%); }
+  .ctrl-btn.solid-red::before    { background: radial-gradient(ellipse at center, rgba(255,26,26,0.3) 0%, transparent 70%); }
+  .ctrl-btn.solid-white::before  { background: radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, transparent 70%); }
+  .ctrl-btn.solid-blue::before   { background: radial-gradient(ellipse at center, rgba(30,100,255,0.3) 0%, transparent 70%); }
+  .ctrl-btn.solid-green::before  { background: radial-gradient(ellipse at center, rgba(0,255,100,0.25) 0%, transparent 70%); }
+  .ctrl-btn.solid-purple::before { background: radial-gradient(ellipse at center, rgba(155,48,255,0.3) 0%, transparent 70%); }
+  .ctrl-btn.solid-yellow::before { background: radial-gradient(ellipse at center, rgba(255,221,51,0.3) 0%, transparent 70%); }
 
-  .ctrl-btn.solid-red .btn-label   { color: #ff4444; text-shadow: 0 0 16px rgba(255,50,50,0.6); }
-  .ctrl-btn.solid-white .btn-label { color: #e0e0e0; text-shadow: 0 0 16px rgba(255,255,255,0.4); }
-  .ctrl-btn.solid-blue .btn-label  { color: #4d9fff; text-shadow: 0 0 16px rgba(50,130,255,0.6); }
-  .ctrl-btn.solid-green .btn-label { color: #33ff88; text-shadow: 0 0 16px rgba(0,255,100,0.5); }
+  .ctrl-btn.solid-red .btn-label    { color: #ff4444; text-shadow: 0 0 16px rgba(255,50,50,0.6); }
+  .ctrl-btn.solid-white .btn-label  { color: #e0e0e0; text-shadow: 0 0 16px rgba(255,255,255,0.4); }
+  .ctrl-btn.solid-blue .btn-label   { color: #4d9fff; text-shadow: 0 0 16px rgba(50,130,255,0.6); }
+  .ctrl-btn.solid-green .btn-label  { color: #33ff88; text-shadow: 0 0 16px rgba(0,255,100,0.5); }
+  .ctrl-btn.solid-purple .btn-label { color: #b366ff; text-shadow: 0 0 16px rgba(155,48,255,0.6); }
+  .ctrl-btn.solid-yellow .btn-label { color: #ffe066; text-shadow: 0 0 16px rgba(255,221,51,0.6); }
 
-  .ctrl-btn.solid-red .btn-sub   { color: #8b0000; }
-  .ctrl-btn.solid-white .btn-sub { color: #555; }
-  .ctrl-btn.solid-blue .btn-sub  { color: #003580; }
-  .ctrl-btn.solid-green .btn-sub { color: #004d1a; }
+  .ctrl-btn.solid-red .btn-sub    { color: #8b0000; }
+  .ctrl-btn.solid-white .btn-sub  { color: #555; }
+  .ctrl-btn.solid-blue .btn-sub   { color: #003580; }
+  .ctrl-btn.solid-green .btn-sub  { color: #004d1a; }
+  .ctrl-btn.solid-purple .btn-sub { color: #4b0082; }
+  .ctrl-btn.solid-yellow .btn-sub { color: #806600; }
 
   /* Active/firing state for color buttons */
   .ctrl-btn.scene-btn.active::before { opacity: 1; }
-  .ctrl-btn.solid-red.active   { border-color: #ff4444; box-shadow: 0 0 18px rgba(255,50,50,0.4); }
-  .ctrl-btn.solid-white.active { border-color: #e0e0e0; box-shadow: 0 0 18px rgba(255,255,255,0.3); }
-  .ctrl-btn.solid-blue.active  { border-color: #4d9fff; box-shadow: 0 0 18px rgba(50,130,255,0.4); }
-  .ctrl-btn.solid-green.active { border-color: #33ff88; box-shadow: 0 0 18px rgba(0,255,100,0.35); }
+  .ctrl-btn.solid-red.active    { border-color: #ff4444; box-shadow: 0 0 18px rgba(255,50,50,0.4); }
+  .ctrl-btn.solid-white.active  { border-color: #e0e0e0; box-shadow: 0 0 18px rgba(255,255,255,0.3); }
+  .ctrl-btn.solid-blue.active   { border-color: #4d9fff; box-shadow: 0 0 18px rgba(50,130,255,0.4); }
+  .ctrl-btn.solid-green.active  { border-color: #33ff88; box-shadow: 0 0 18px rgba(0,255,100,0.35); }
+  .ctrl-btn.solid-purple.active { border-color: #b366ff; box-shadow: 0 0 18px rgba(155,48,255,0.4); }
+  .ctrl-btn.solid-yellow.active { border-color: #ffe066; box-shadow: 0 0 18px rgba(255,221,51,0.35); }
 
   /* ── Animations ── */
   @keyframes iconPulse {
@@ -566,6 +576,20 @@
       <div class="btn-icon">🟢</div>
       <div class="btn-label">GREEN</div>
       <div class="btn-sub">SOLID GREEN</div>
+    </button>
+
+    <!-- SOLID PURPLE -->
+    <button class="ctrl-btn scene-btn solid-purple" id="btn-purple" data-scene="purple" ontouchstart="handleScene(event, 'purple')" onclick="handleScene(event, 'purple')">
+      <div class="btn-icon">🟣</div>
+      <div class="btn-label">PURPLE</div>
+      <div class="btn-sub">SOLID PURPLE</div>
+    </button>
+
+    <!-- SOLID YELLOW -->
+    <button class="ctrl-btn scene-btn solid-yellow" id="btn-yellow" data-scene="yellow" ontouchstart="handleScene(event, 'yellow')" onclick="handleScene(event, 'yellow')">
+      <div class="btn-icon">🟡</div>
+      <div class="btn-label">YELLOW</div>
+      <div class="btn-sub">SOLID YELLOW</div>
     </button>
 
   </div>
@@ -689,6 +713,20 @@
       audioSrc:  '',
       light:     'solid',
       color:     'green saturation:1.0 brightness:1.0',
+    },
+    purple: {
+      label:     'SOLID PURPLE',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'solid',
+      color:     'purple saturation:1.0 brightness:1.0',
+    },
+    yellow: {
+      label:     'SOLID YELLOW',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'solid',
+      color:     'yellow saturation:1.0 brightness:1.0',
     },
   };
 
