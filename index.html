@@ -905,6 +905,19 @@
 
   async function lifxStrobe(selector, color = 'red', period = 0.76) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    // The laser meteor effect deliberately zeroes most zones' brightness for
+    // its blackout trail, and that per-zone brightness sticks around after
+    // the effect ends. effects/pulse doesn't repaint per-zone color data —
+    // it just pulses on top of whatever's already there — so without this
+    // reset the strip can come back "on" but stuck invisible at brightness 0
+    // if a meteor ran at any point before. Always start a strobe from a
+    // known-good baseline, awaited before the pulse call so it can't race it.
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ color: 'brightness:1.0', power: 'on', duration: 0 })
+    }).catch(() => null);
+
     const pulseRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -1098,8 +1111,22 @@
       playSceneAudio(scene);
       await Promise.all(selectors.map(sel => lifxMeteorStart(sel, scene.period, scene.cycles)));
       // One lap and done — automatically stop and go back to black once it completes.
+      // Guarded so a timer that fires while the user has already moved on to
+      // another button can't race that transition and kill its lights (this
+      // used to call deactivateScene directly, unguarded by
+      // transitionInProgress, which could turn a freshly-started scene back
+      // off moments after it started).
       if (scene.cycles) {
-        meteorAutoStopTimer = setTimeout(() => deactivateScene(sceneId, false), scene.period * 1000);
+        meteorAutoStopTimer = setTimeout(async () => {
+          meteorAutoStopTimer = null;
+          if (transitionInProgress || activeScene !== sceneId) return;
+          transitionInProgress = true;
+          try {
+            await deactivateScene(sceneId, false);
+          } finally {
+            transitionInProgress = false;
+          }
+        }, scene.period * 1000);
       }
     }
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
