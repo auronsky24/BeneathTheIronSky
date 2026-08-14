@@ -640,7 +640,7 @@
     <button class="ctrl-btn scene-btn lasers" id="btn-lasers" data-scene="lasers" ontouchstart="handleScene(event, 'lasers')" onclick="handleScene(event, 'lasers')">
       <div class="btn-icon">🔫</div>
       <div class="btn-label">FIRING LASERS</div>
-      <div class="btn-sub">STROBE GREEN · LASER SFX</div>
+      <div class="btn-sub">METEOR GREEN · LASER SFX</div>
     </button>
 
     <!-- SHIELDS BUTTON -->
@@ -780,6 +780,7 @@
 
   // ── Init ──
   updateStatusDot();
+  if (config.token) getSelectors().forEach(sel => getZoneCount(sel));
 
   function startAlarmSound() {
     alarmAudio.currentTime = 0;
@@ -791,6 +792,14 @@
     alarmAudio.currentTime = 0;
   }
 
+  function playSceneAudio(scene) {
+    if (!scene.playAudio || !scene.audioSrc) return;
+    if (alarmAudio.src !== scene.audioSrc) alarmAudio.src = scene.audioSrc;
+    alarmAudio.loop = scene.loop !== false;
+    alarmAudio.currentTime = 0;
+    alarmAudio.play().catch(err => showToast(`PLAY ERROR: ${err.message}`, 'error'));
+  }
+
   // ── Scene Definitions ──
   // To add audio to any scene: set playAudio to true and set audioSrc to your file URL
   const scenes = {
@@ -800,13 +809,17 @@
       audioSrc:  'Alarm.mp3',          // ← swap filename or URL here
       light:     'strobe',
       color:     'red',
+      period:    1.93,
     },
     lasers: {
-      label:     'STROBE GREEN · LASER SFX',
+      label:     'METEOR GREEN · LASER SFX',
       playAudio: true,
       audioSrc:  'Lasers.mp3',
-      light:     'strobe',
+      light:     'meteor',
       color:     'green',
+      period:    2,
+      cycles:    1,
+      loop:      false,
     },
     shields: {
       label:     'STROBE BLUE · SHIELD TONE',
@@ -890,14 +903,14 @@
     return [...new Set(selectors)].map(s => encodeURIComponent(s));
   }
 
-  async function lifxStrobe(selector, color = 'red') {
+  async function lifxStrobe(selector, color = 'red', period = 0.76) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
     const pulseRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
       method: 'POST', headers,
       body: JSON.stringify({
         color: 'brightness:0.0',
         from_color: color,
-        period: 0.76,
+        period,
         cycles: 9999,
         persist: true,
         power_on: true
@@ -916,20 +929,27 @@
   // set each band directly instead).
   const zoneCountCache = {};
 
+  // Cached so the first press of a zone-based effect doesn't have to wait on
+  // this lookup — see the prefetch call in Init below.
+  async function getZoneCount(selector) {
+    if (zoneCountCache[selector]) return zoneCountCache[selector];
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+    const getRes = await fetch(`https://api.lifx.com/v1/lights/${selector}`, { headers }).catch(() => null);
+    if (!getRes || !getRes.ok) return null; // API unreachable right now — stay quiet, like the other buttons
+    const lights = await getRes.json().catch(() => []);
+    const light = lights[0];
+    if (!light || !light.connected) return null; // no matching light, or it's offline — nothing to paint
+    const zoneCount = light.zones?.count;
+    if (!zoneCount) { showToast('LIFX ERROR: LIGHT HAS NO ZONES', 'error'); return null; }
+    zoneCountCache[selector] = zoneCount;
+    return zoneCount;
+  }
+
   async function lifxGradient(selector, palette) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
 
-    let zoneCount = zoneCountCache[selector];
-    if (!zoneCount) {
-      const getRes = await fetch(`https://api.lifx.com/v1/lights/${selector}`, { headers }).catch(() => null);
-      if (!getRes || !getRes.ok) return; // API unreachable right now — stay quiet, like the other buttons
-      const lights = await getRes.json().catch(() => []);
-      const light = lights[0];
-      if (!light || !light.connected) return; // no matching light, or it's offline — nothing to paint
-      zoneCount = light.zones?.count;
-      if (!zoneCount) { showToast('LIFX ERROR: LIGHT HAS NO ZONES', 'error'); return; }
-      zoneCountCache[selector] = zoneCount;
-    }
+    const zoneCount = await getZoneCount(selector);
+    if (!zoneCount) return;
 
     const bandSize = Math.ceil(zoneCount / palette.length);
     const puts = palette.map((color, i) => {
@@ -944,6 +964,51 @@
 
     const results = await Promise.all(puts);
     if (results.some(r => !r.ok)) showToast('LIFX ERROR: GRADIENT PARTIALLY FAILED', 'error');
+  }
+
+  // Paints a small bright head near the start of a multizone strip and blacks
+  // out the rest, ready for the "move" effect to chase it down the strip — the
+  // closest native LIFX effect to a meteor streak. Split from lifxMeteorStart
+  // so the caller can fire scene audio in between, once the strip is actually
+  // dark, to sync the sound with the visual. The blackout and the head are
+  // written sequentially (not in parallel) because two concurrent zone writes
+  // to the same physical strip can race on the mesh — the loser gets dropped,
+  // which is what left the whole strip lit behind the meteor instead of going
+  // dark.
+  async function lifxMeteorPrepare(selector, color = 'green') {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    const zoneCount = await getZoneCount(selector);
+    if (!zoneCount) return;
+
+    const offRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ color: 'saturation:0 brightness:0', power: 'on', duration: 0 })
+    }).catch(() => null);
+
+    const headLength = Math.min(2, zoneCount);
+    const headRes = await fetch(`https://api.lifx.com/v1/lights/${selector}|0-${headLength - 1}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ color: `${color} saturation:1.0 brightness:1.0`, power: 'on', duration: 0 })
+    }).catch(() => null);
+
+    if (!offRes || !offRes.ok || !headRes || !headRes.ok) {
+      showToast('LIFX ERROR: METEOR SETUP FAILED', 'error');
+    }
+  }
+
+  async function lifxMeteorStart(selector, period = 2, cycles = 9999) {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+
+    const moveRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/move`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ direction: 'forward', period, cycles, power_on: true })
+    }).catch(() => null);
+
+    if (!moveRes || !moveRes.ok) {
+      const e = moveRes ? await moveRes.json().catch(() => ({})) : {};
+      showToast(`LIFX ERROR: ${e.error || 'MOVE FAILED'}`, 'error');
+    }
   }
 
   async function lifxSolid(selector, color) {
@@ -975,6 +1040,7 @@
   };
   let activeScene = null;
   let touchHandled = false;
+  let meteorAutoStopTimer = null;
 
   let transitionInProgress = false;
 
@@ -1007,24 +1073,35 @@
 
     activeScene = sceneId;
     btn.classList.add('active');
-    if (scene.light === 'strobe') {
+    if (scene.light === 'strobe' || scene.light === 'meteor') {
       btn.classList.add('firing');
       overlay.style.background = flashColors[scene.color] || flashColors.red;
       overlay.classList.add('active');
     }
     btn.querySelector('.btn-sub').textContent = 'TAP TO STOP';
 
-    // Audio
-    if (scene.playAudio && scene.audioSrc) {
-      if (alarmAudio.src !== scene.audioSrc) alarmAudio.src = scene.audioSrc;
-      alarmAudio.currentTime = 0;
-      alarmAudio.play().catch(err => showToast(`PLAY ERROR: ${err.message}`, 'error'));
-    }
+    // Audio — strobe and meteor scenes delay playback until the light call
+    // actually goes out (below), so the sound lines up with the visual
+    // instead of firing before the effect has triggered. Other scenes play
+    // right away.
+    if (scene.light !== 'meteor' && scene.light !== 'strobe') playSceneAudio(scene);
 
     // Lights — if skipLightsOff we go straight to the new state with no off in between
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
     const selectors = getSelectors();
-    if (scene.light === 'strobe') await Promise.all(selectors.map(sel => lifxStrobe(sel, scene.color)));
+    if (scene.light === 'strobe') {
+      await Promise.all(selectors.map(sel => lifxStrobe(sel, scene.color, scene.period)));
+      playSceneAudio(scene);
+    }
+    if (scene.light === 'meteor') {
+      await Promise.all(selectors.map(sel => lifxMeteorPrepare(sel, scene.color)));
+      playSceneAudio(scene);
+      await Promise.all(selectors.map(sel => lifxMeteorStart(sel, scene.period, scene.cycles)));
+      // One lap and done — automatically stop and go back to black once it completes.
+      if (scene.cycles) {
+        meteorAutoStopTimer = setTimeout(() => deactivateScene(sceneId, false), scene.period * 1000);
+      }
+    }
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
     if (scene.light === 'gradient') await Promise.all(selectors.map(sel => lifxGradient(sel, scene.palette)));
   }
@@ -1033,6 +1110,8 @@
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
+
+    if (meteorAutoStopTimer) { clearTimeout(meteorAutoStopTimer); meteorAutoStopTimer = null; }
 
     activeScene = null;
     btn.classList.remove('active', 'firing');
@@ -1079,6 +1158,7 @@
     updateStatusDot();
     closeSettings();
     showToast('CONFIG SAVED', 'success');
+    if (config.token) getSelectors().forEach(sel => getZoneCount(sel));
   }
 
   function updateStatusDot() {
