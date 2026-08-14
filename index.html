@@ -876,6 +876,7 @@
       period:    2,
       cycles:    1,
       loop:      false,
+      stopEarly: 0.5,  // cut the effect (and its audio) this many seconds before period would naturally finish
     },
     shields: {
       label:     'FLICKER · SHIELD TONE',
@@ -907,7 +908,7 @@
       playAudio: false,
       audioSrc:  '',
       light:     'solid',
-      color:     'white saturation:0 brightness:1.0',
+      color:     'kelvin:9000 saturation:0 brightness:1.0',
     },
     blue: {
       label:     'SOLID BLUE',
@@ -980,9 +981,13 @@
     // reset the strip can come back "on" but stuck invisible at brightness 0
     // if a meteor ran at any point before. Always start a strobe from a
     // known-good baseline, awaited before the pulse call so it can't race it.
+    // Pinning kelvin explicitly (not just brightness) matters here too: if an
+    // effect gets cancelled and the device falls back to showing this
+    // baseline instead of the pulse color, we want that fallback to be a
+    // known-good white, not whatever kelvin the device happened to drift to.
     await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT', headers,
-      body: JSON.stringify({ color: 'brightness:1.0', power: 'on', duration: 0 })
+      body: JSON.stringify({ color: 'kelvin:9000 brightness:1.0', power: 'on', duration: 0 })
     }).catch(() => null);
 
     const pulseRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
@@ -1068,9 +1073,14 @@
     const zoneCount = await getZoneCount(selector);
     if (!zoneCount) return;
 
+    // Pinning kelvin here (not just brightness/saturation) even though it's
+    // invisible at brightness 0 — leaving it unspecified means these zones
+    // just keep whatever kelvin they last had, and if that ever gets shown
+    // again without an explicit color (e.g. after an effect gets cancelled),
+    // an undefined kelvin is how a light ends up looking randomly orange.
     const offRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT', headers,
-      body: JSON.stringify({ color: 'saturation:0 brightness:0', power: 'on', duration: 0 })
+      body: JSON.stringify({ color: 'kelvin:9000 saturation:0 brightness:0', power: 'on', duration: 0 })
     }).catch(() => null);
 
     const headLength = Math.min(2, zoneCount);
@@ -1176,8 +1186,9 @@
         await deactivateScene(sceneId, false);
       } else {
         // Override: deactivate UI only (no lifxOff), let new scene take over lights directly
+        const previousSceneId = activeScene;
         if (activeScene) await deactivateScene(activeScene, true);
-        await activateScene(sceneId);
+        await activateScene(sceneId, previousSceneId);
       }
     } finally {
       transitionInProgress = false;
@@ -1219,8 +1230,11 @@
         method: 'PUT', headers, body: JSON.stringify({ power: 'on', duration: 0 })
       }).catch(() => null);
       await wait(300);
+      // Explicitly pinning kelvin (not just brightness) to a known-good
+      // white — an unspecified kelvin just inherits whatever the device
+      // drifted to, which is how it ends up looking randomly orange.
       const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
-        method: 'PUT', headers, body: JSON.stringify({ brightness: 1.0, duration: 0 })
+        method: 'PUT', headers, body: JSON.stringify({ color: 'kelvin:9000 saturation:0', brightness: 1.0, duration: 0 })
       }).catch(() => null);
 
       if (res && res.ok) showToast('RESET COMPLETE', 'success');
@@ -1231,7 +1245,7 @@
     }
   }
 
-  async function activateScene(sceneId, skipLightsOff = false) {
+  async function activateScene(sceneId, revertToSceneId = null) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
@@ -1252,7 +1266,7 @@
     const delaysAudio = scene.light === 'meteor' || scene.light === 'strobe' || scene.light === 'flicker';
     if (!delaysAudio) playSceneAudio(scene);
 
-    // Lights — if skipLightsOff we go straight to the new state with no off in between
+    // Lights
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
     const selectors = getSelectors();
     if (scene.light === 'strobe') {
@@ -1263,7 +1277,9 @@
       await Promise.all(selectors.map(sel => lifxMeteorPrepare(sel, scene.color)));
       playSceneAudio(scene);
       await Promise.all(selectors.map(sel => lifxEffectMove(sel, scene.period, scene.cycles)));
-      // One lap and done — automatically stop and go back to black once it completes.
+      // One lap and done — automatically stop once it completes, reverting to
+      // whatever scene (if any) was active right before this one started,
+      // instead of just turning off. Falls back to off if nothing was active.
       // Guarded so a timer that fires while the user has already moved on to
       // another button can't race that transition and kill its lights (this
       // used to call deactivateScene directly, unguarded by
@@ -1275,11 +1291,16 @@
           if (transitionInProgress || activeScene !== sceneId) return;
           transitionInProgress = true;
           try {
-            await deactivateScene(sceneId, false);
+            if (revertToSceneId && scenes[revertToSceneId]) {
+              await deactivateScene(sceneId, true); // switching=true: skip lifxOff, the revert below sets the real end state
+              await activateScene(revertToSceneId);
+            } else {
+              await deactivateScene(sceneId, false);
+            }
           } finally {
             transitionInProgress = false;
           }
-        }, scene.period * 1000);
+        }, (scene.period - (scene.stopEarly || 0)) * 1000);
       }
     }
     if (scene.light === 'flicker') {
