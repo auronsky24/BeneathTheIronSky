@@ -115,6 +115,31 @@
     background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
   }
 
+  /* ── Reset Button ── */
+  .reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--amber);
+    border-radius: 8px;
+    color: var(--amber);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .reset-btn:active { transform: scale(0.98); background: rgba(255, 170, 0, 0.1); }
+  .reset-btn:disabled { opacity: 0.5; cursor: default; }
+
   /* ── Button Grid ── */
   .grid {
     flex: 1;
@@ -627,6 +652,11 @@
 
   <div class="divider"></div>
 
+  <!-- RESET BUTTON — power-cycles the "basement" group and sets it back to
+       full brightness, as a manual escape hatch when a scene leaves the
+       lights in a bad state. -->
+  <button class="reset-btn" id="btn-reset" onclick="handleReset()">🔄 RESET</button>
+
   <div class="grid">
 
     <!-- ALARM BUTTON -->
@@ -647,7 +677,7 @@
     <button class="ctrl-btn scene-btn shields" id="btn-shields" data-scene="shields" ontouchstart="handleScene(event, 'shields')" onclick="handleScene(event, 'shields')">
       <div class="btn-icon">🛡️</div>
       <div class="btn-label">SHIELDS</div>
-      <div class="btn-sub">STROBE BLUE · SHIELD TONE</div>
+      <div class="btn-sub">FLICKER · SHIELD TONE</div>
     </button>
 
 
@@ -778,6 +808,31 @@
   alarmAudio.addEventListener('canplaythrough', () => showToast('AUDIO READY', 'success'));
   alarmAudio.addEventListener('error', () => showToast('AUDIO ERROR — check Alarm.mp3 is in the repo', 'error'));
 
+  // Scenes with stopOnAudioEnd run their light effect continuously (no fixed
+  // lap count) and rely on 'ended' to wind everything down in sync with the
+  // one-shot audio clip, instead of a fixed timer that could drift out of
+  // sync with the actual clip length. keepLightsOn=true means this reset the
+  // button/audio/timer state but leave the physical light as-is (already
+  // settled full-on by the flicker) rather than powering it off — so nothing
+  // has to be manually re-tapped just to keep the light on. audioStopTriggered
+  // guards against a double-fire. Guarded by transitionInProgress the same
+  // way as the meteor's auto-stop timer so it can't race a manual transition
+  // to another scene.
+  let audioStopTriggered = false;
+  async function stopSceneForAudio() {
+    const sceneId = activeScene;
+    const scene = scenes[sceneId];
+    if (!scene || !scene.stopOnAudioEnd || transitionInProgress || audioStopTriggered) return;
+    audioStopTriggered = true;
+    transitionInProgress = true;
+    try {
+      await deactivateScene(sceneId, false, true);
+    } finally {
+      transitionInProgress = false;
+    }
+  }
+  alarmAudio.addEventListener('ended', stopSceneForAudio);
+
   // ── Init ──
   updateStatusDot();
   if (config.token) getSelectors().forEach(sel => getZoneCount(sel));
@@ -797,6 +852,7 @@
     if (alarmAudio.src !== scene.audioSrc) alarmAudio.src = scene.audioSrc;
     alarmAudio.loop = scene.loop !== false;
     alarmAudio.currentTime = 0;
+    audioStopTriggered = false;
     alarmAudio.play().catch(err => showToast(`PLAY ERROR: ${err.message}`, 'error'));
   }
 
@@ -822,11 +878,22 @@
       loop:      false,
     },
     shields: {
-      label:     'STROBE BLUE · SHIELD TONE',
+      label:     'FLICKER · SHIELD TONE',
       playAudio: true,
       audioSrc:  'shields.mp3',
-      light:     'strobe',
-      color:     'blue',
+      light:     'flicker',
+      color:     'blue',           // just picks the on-screen flash-overlay tint
+      // No palette to paint first — flickers whatever color the light is
+      // already showing, skipping that repaint step entirely.
+      period:        0.25,         // seconds between flicker ticks
+      flickerAmount: 1.0,          // 0–1, how far brightness swings each tick — 1.0 = full 0–100%
+      loop:      false,
+      flickerTicks: 5,  // total flicker ticks (including the first), then settle to full brightness
+      // Effect settles to full brightness after flickerTicks and stays there
+      // — the scene deactivates when the audio clip finishes, but leaves the
+      // light on instead of powering it off (see keepLightsOn in
+      // stopSceneForAudio/deactivateScene below).
+      stopOnAudioEnd: true,
     },
     red: {
       label:     'SOLID RED',
@@ -925,7 +992,14 @@
         from_color: color,
         period,
         cycles: 9999,
-        persist: true,
+        // persist:true would leave the light frozen at whichever pulse frame
+        // it happened to be on when cancelled (which alternates down to
+        // brightness 0 every half-period) — a likely culprit for the light
+        // coming back dark and refusing to strobe after being interrupted
+        // (e.g. by Reset) mid-pulse. We always send an explicit state right
+        // before starting the pulse anyway, so there's nothing to gain by
+        // persisting the cancelled frame — false (the default) is safer.
+        persist: false,
         power_on: true
       })
     }).catch(() => null);
@@ -981,7 +1055,7 @@
 
   // Paints a small bright head near the start of a multizone strip and blacks
   // out the rest, ready for the "move" effect to chase it down the strip — the
-  // closest native LIFX effect to a meteor streak. Split from lifxMeteorStart
+  // closest native LIFX effect to a meteor streak. Split from lifxEffectMove
   // so the caller can fire scene audio in between, once the strip is actually
   // dark, to sync the sound with the visual. The blackout and the head are
   // written sequentially (not in parallel) because two concurrent zone writes
@@ -1010,7 +1084,10 @@
     }
   }
 
-  async function lifxMeteorStart(selector, period = 2, cycles = 9999) {
+  // Fires LIFX's zone "move" effect on whatever colors are currently painted
+  // on the strip. Used by the laser meteor (a bright head + blackout painted
+  // first, since moving a solid color shows no visible motion).
+  async function lifxEffectMove(selector, period = 2, cycles = 9999) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
 
     const moveRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/move`, {
@@ -1024,6 +1101,21 @@
     }
   }
 
+  // LIFX's HTTP API has no native flicker effect, so this drives one from the
+  // client: each tick sets a random overall brightness (leaving each zone's
+  // painted hue/saturation alone, since "brightness" here is a top-level
+  // scale rather than part of the color string). amount is 0–1 — how far
+  // brightness swings below full each tick; 1.0 swings across the full range.
+  async function lifxFlickerTick(selector, amount = 1.0) {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+    const min = 1 - amount;
+    const brightness = min + Math.random() * amount;
+    await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ brightness, power: 'on', duration: 0 })
+    }).catch(() => null);
+  }
+
   async function lifxSolid(selector, color) {
     const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT',
@@ -1033,12 +1125,24 @@
     if (res && !res.ok) { const e = await res.json().catch(() => ({})); showToast(`LIFX ERROR: ${e.error || res.status}`, 'error'); }
   }
 
-  async function lifxOff(selector) {
+  // Stops whatever device-side firmware effect (move, pulse, breathe, etc.)
+  // is currently running, without changing power or color. A light can only
+  // run one such effect at a time, and switching scenes intentionally skips
+  // lifxOff (to avoid racing the new scene's own lights) — so without this,
+  // a still-active effect from the previous scene (e.g. the laser's move
+  // effect) could keep fighting a freshly-started one for control of the
+  // device instead of being cleanly replaced.
+  async function lifxCancelEffects(selector) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
     await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/off`, {
       method: 'POST', headers,
       body: JSON.stringify({ power_off: false })
     }).catch(() => {});
+  }
+
+  async function lifxOff(selector) {
+    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+    await lifxCancelEffects(selector);
     await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT', headers,
       body: JSON.stringify({ power: 'off', duration: 0 })
@@ -1054,6 +1158,7 @@
   let activeScene = null;
   let touchHandled = false;
   let meteorAutoStopTimer = null;
+  let flickerInterval = null;
 
   let transitionInProgress = false;
 
@@ -1079,6 +1184,53 @@
     }
   }
 
+  // Manual escape hatch for when a scene leaves the lights in a bad state:
+  // power-cycles the "basement" group (off, then on) and sets it back to
+  // full brightness, regardless of whatever scene/effect was last running.
+  // Fixed to the "basement" group rather than the configured selector, since
+  // the point is to recover the physical lights no matter what's configured.
+  async function handleReset() {
+    if (transitionInProgress) return;
+    transitionInProgress = true;
+    const btn = document.getElementById('btn-reset');
+    try {
+      if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
+      if (activeScene) await deactivateScene(activeScene, true);
+
+      btn.disabled = true;
+      const selector = encodeURIComponent('group:Basement');
+      const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+
+      // Interrupting an active effect (e.g. hitting Reset mid-strobe) and
+      // then power-cycling right away can send the device several commands
+      // faster than it can actually process them over the mesh — the same
+      // class of race we saw with the laser meteor's zone painting. A short
+      // settle pause between each step gives the device time to actually
+      // apply one before the next arrives, instead of leaving it in a
+      // confused state where even a fresh effect afterward won't start.
+      await lifxCancelEffects(selector);
+      await wait(300);
+      await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+        method: 'PUT', headers, body: JSON.stringify({ power: 'off', duration: 0 })
+      }).catch(() => null);
+      await wait(300);
+      await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+        method: 'PUT', headers, body: JSON.stringify({ power: 'on', duration: 0 })
+      }).catch(() => null);
+      await wait(300);
+      const res = await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
+        method: 'PUT', headers, body: JSON.stringify({ brightness: 1.0, duration: 0 })
+      }).catch(() => null);
+
+      if (res && res.ok) showToast('RESET COMPLETE', 'success');
+      else { const e = res ? await res.json().catch(() => ({})) : {}; showToast(`LIFX ERROR: ${e.error || 'RESET FAILED'}`, 'error'); }
+    } finally {
+      btn.disabled = false;
+      transitionInProgress = false;
+    }
+  }
+
   async function activateScene(sceneId, skipLightsOff = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
@@ -1086,18 +1238,19 @@
 
     activeScene = sceneId;
     btn.classList.add('active');
-    if (scene.light === 'strobe' || scene.light === 'meteor') {
+    if (scene.light === 'strobe' || scene.light === 'meteor' || scene.light === 'flicker') {
       btn.classList.add('firing');
       overlay.style.background = flashColors[scene.color] || flashColors.red;
       overlay.classList.add('active');
     }
     btn.querySelector('.btn-sub').textContent = 'TAP TO STOP';
 
-    // Audio — strobe and meteor scenes delay playback until the light call
-    // actually goes out (below), so the sound lines up with the visual
-    // instead of firing before the effect has triggered. Other scenes play
-    // right away.
-    if (scene.light !== 'meteor' && scene.light !== 'strobe') playSceneAudio(scene);
+    // Audio — strobe, meteor, and flicker scenes delay playback until the
+    // light call actually goes out (below), so the sound lines up with the
+    // visual instead of firing before the effect has triggered. Other
+    // scenes play right away.
+    const delaysAudio = scene.light === 'meteor' || scene.light === 'strobe' || scene.light === 'flicker';
+    if (!delaysAudio) playSceneAudio(scene);
 
     // Lights — if skipLightsOff we go straight to the new state with no off in between
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
@@ -1109,7 +1262,7 @@
     if (scene.light === 'meteor') {
       await Promise.all(selectors.map(sel => lifxMeteorPrepare(sel, scene.color)));
       playSceneAudio(scene);
-      await Promise.all(selectors.map(sel => lifxMeteorStart(sel, scene.period, scene.cycles)));
+      await Promise.all(selectors.map(sel => lifxEffectMove(sel, scene.period, scene.cycles)));
       // One lap and done — automatically stop and go back to black once it completes.
       // Guarded so a timer that fires while the user has already moved on to
       // another button can't race that transition and kill its lights (this
@@ -1129,16 +1282,43 @@
         }, scene.period * 1000);
       }
     }
+    if (scene.light === 'flicker') {
+      // No repaint step — flickers whatever color is currently showing.
+      playSceneAudio(scene);
+      // Ticks on a fixed interval, capped at flickerTicks total rather than
+      // running for a fixed duration — a duration at this tick rate let
+      // requests queue up faster than LIFX's cloud API could apply them, so
+      // stragglers kept landing well after the flicker was meant to be done.
+      // Capping the tick count keeps it short and simple. First tick fires
+      // immediately, right alongside the audio, instead of being awaited
+      // first — the tick cap already keeps things from running long, so
+      // there's no need to delay the audio for it anymore.
+      let ticksSoFar = 0;
+      const maxTicks = scene.flickerTicks || 4;
+      const fireFlickerTick = () => {
+        ticksSoFar++;
+        if (ticksSoFar >= maxTicks) {
+          clearInterval(flickerInterval);
+          flickerInterval = null;
+          selectors.forEach(sel => lifxFlickerTick(sel, 0)); // amount 0 → settles at full brightness
+        } else {
+          selectors.forEach(sel => lifxFlickerTick(sel, scene.flickerAmount));
+        }
+      };
+      fireFlickerTick();
+      flickerInterval = setInterval(fireFlickerTick, scene.period * 1000);
+    }
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
     if (scene.light === 'gradient') await Promise.all(selectors.map(sel => lifxGradient(sel, scene.palette)));
   }
 
-  async function deactivateScene(sceneId, switching = false) {
+  async function deactivateScene(sceneId, switching = false, keepLightsOn = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
 
     if (meteorAutoStopTimer) { clearTimeout(meteorAutoStopTimer); meteorAutoStopTimer = null; }
+    if (flickerInterval) { clearInterval(flickerInterval); flickerInterval = null; }
 
     activeScene = null;
     btn.classList.remove('active', 'firing');
@@ -1149,9 +1329,10 @@
     alarmAudio.pause();
     alarmAudio.currentTime = 0;
 
-    // Only call lifxOff if we are truly turning off (not switching to another scene)
-    // This prevents the off command from racing and killing the new scene's lights
-    if (config.token && !switching) {
+    // Only call lifxOff if we are truly turning off (not switching to another
+    // scene, and not a scene that wants to leave its lights as-is once it
+    // winds down — see stopSceneForAudio).
+    if (config.token && !switching && !keepLightsOn) {
       const selectors = getSelectors();
       await Promise.all(selectors.map(sel => lifxOff(sel)));
     }
