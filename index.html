@@ -866,6 +866,8 @@
       light:     'strobe',
       color:     'red',
       period:    1.93,
+      cycles:    5,  // auto-stop after this many pulse cycles, reverting to whatever was on before
+      audioTailSeconds: 1,  // let Alarm.mp3 keep playing this long after the light switches back
     },
     lasers: {
       label:     'METEOR GREEN · LASER SFX',
@@ -945,8 +947,8 @@
       label:     'THEME · MELLOW',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradient',
-      palette:   ['hue:235 saturation:0.66', 'hue:284 saturation:0.66', 'hue:329 saturation:0.66'],
+      light:     'gradientSmooth',
+      stops:     [{ hue: 235, saturation: 66 }, { hue: 284, saturation: 66 }, { hue: 329, saturation: 66 }],
     },
     tranquil: {
       label:     'THEME · TRANQUIL',
@@ -961,8 +963,8 @@
       label:     'THEME · ENERGIZING',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradient',
-      palette:   ['hue:210 saturation:0.69', 'hue:157 saturation:0.70', 'hue:124 saturation:0.68'],
+      light:     'gradientSmooth',
+      stops:     [{ hue: 210, saturation: 69 }, { hue: 157, saturation: 70 }, { hue: 124, saturation: 68 }],
     },
   };
 
@@ -973,7 +975,7 @@
     return [...new Set(selectors)].map(s => encodeURIComponent(s));
   }
 
-  async function lifxStrobe(selector, color = 'red', period = 0.76) {
+  async function lifxStrobe(selector, color = 'red', period = 0.76, cycles = 9999) {
     const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
 
     // The laser meteor effect deliberately zeroes most zones' brightness for
@@ -998,7 +1000,7 @@
         color: 'brightness:0.0',
         from_color: color,
         period,
-        cycles: 9999,
+        cycles,
         // persist:true would leave the light frozen at whichever pulse frame
         // it happened to be on when cancelled (which alternates down to
         // brightness 0 every half-period) — a likely culprit for the light
@@ -1017,10 +1019,9 @@
     }
   }
 
-  // Paints a static multi-color gradient across a multizone lightstrip's real
-  // zones (the "morph" effect only works on Tile/Candle matrix devices, not
-  // linear strips like this one — so we split the strip's actual zones and
-  // set each band directly instead).
+  // Zone-based effects (the "morph" effect only works on Tile/Candle matrix
+  // devices, not linear strips like this one — so gradients are painted by
+  // splitting the strip's actual zones and setting each band directly).
   const zoneCountCache = {};
 
   // Cached so the first press of a zone-based effect doesn't have to wait on
@@ -1037,27 +1038,6 @@
     if (!zoneCount) { showToast('LIFX ERROR: LIGHT HAS NO ZONES', 'error'); return null; }
     zoneCountCache[selector] = zoneCount;
     return zoneCount;
-  }
-
-  async function lifxGradient(selector, palette) {
-    const headers = { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' };
-
-    const zoneCount = await getZoneCount(selector);
-    if (!zoneCount) return;
-
-    const bandSize = Math.ceil(zoneCount / palette.length);
-    const puts = palette.map((color, i) => {
-      const start = i * bandSize;
-      const end = Math.min(start + bandSize - 1, zoneCount - 1);
-      if (start > end) return null;
-      return fetch(`https://api.lifx.com/v1/lights/${selector}|${start}-${end}/state`, {
-        method: 'PUT', headers,
-        body: JSON.stringify({ color, brightness: 1, power: 'on', duration: 0.5 })
-      });
-    }).filter(Boolean);
-
-    const results = await Promise.all(puts);
-    if (results.some(r => !r.ok)) showToast('LIFX ERROR: GRADIENT PARTIALLY FAILED', 'error');
   }
 
   // Shortest-arc hue interpolation (hue is circular, 0-360) — going the long
@@ -1228,10 +1208,46 @@
   };
   let activeScene = null;
   let touchHandled = false;
-  let meteorAutoStopTimer = null;
+  let sceneAutoStopTimer = null;
   let flickerInterval = null;
 
   let transitionInProgress = false;
+
+  // Shared by any cycle-limited effect (the laser meteor, the alarm strobe)
+  // that should stop on its own once its cycles finish, reverting to
+  // whatever scene (if any) was active right before it started instead of
+  // just turning off — falls back to off if nothing was active. Guarded so
+  // a timer that fires while the user has already moved on to another
+  // button can't race that transition and kill its lights (this used to
+  // call deactivateScene directly, unguarded by transitionInProgress, which
+  // could turn a freshly-started scene back off moments after it started).
+  // audioTailSeconds (optional) lets the audio ride out past the light
+  // switch instead of cutting off mid-clip — scheduled independently right
+  // when the timer fires, so it isn't held up by however long the light
+  // revert's own network calls take.
+  function scheduleAutoStop(sceneId, revertToSceneId, delaySeconds, audioTailSeconds = 0) {
+    sceneAutoStopTimer = setTimeout(async () => {
+      sceneAutoStopTimer = null;
+      if (transitionInProgress || activeScene !== sceneId) return;
+      transitionInProgress = true;
+
+      if (audioTailSeconds > 0) {
+        setTimeout(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }, audioTailSeconds * 1000);
+      }
+
+      try {
+        if (revertToSceneId && scenes[revertToSceneId]) {
+          // switching=true: skip lifxOff, the revert below sets the real end state
+          await deactivateScene(sceneId, true, false, audioTailSeconds > 0);
+          await activateScene(revertToSceneId);
+        } else {
+          await deactivateScene(sceneId, false, false, audioTailSeconds > 0);
+        }
+      } finally {
+        transitionInProgress = false;
+      }
+    }, delaySeconds * 1000);
+  }
 
   async function handleScene(e, sceneId) {
     if (e.type === 'touchstart') { touchHandled = true; }
@@ -1331,37 +1347,21 @@
     if (!config.token) { showToast('NO TOKEN — open Config first', 'error'); return; }
     const selectors = getSelectors();
     if (scene.light === 'strobe') {
-      await Promise.all(selectors.map(sel => lifxStrobe(sel, scene.color, scene.period)));
+      await Promise.all(selectors.map(sel => lifxStrobe(sel, scene.color, scene.period, scene.cycles)));
       playSceneAudio(scene);
+      // If cycles is capped (not the default endless strobe), auto-stop once
+      // they finish rather than requiring another tap — see scheduleAutoStop.
+      if (scene.cycles) {
+        scheduleAutoStop(sceneId, revertToSceneId, scene.cycles * scene.period - (scene.stopEarly || 0), scene.audioTailSeconds);
+      }
     }
     if (scene.light === 'meteor') {
       await Promise.all(selectors.map(sel => lifxMeteorPrepare(sel, scene.color)));
       playSceneAudio(scene);
       await Promise.all(selectors.map(sel => lifxEffectMove(sel, scene.period, scene.cycles)));
-      // One lap and done — automatically stop once it completes, reverting to
-      // whatever scene (if any) was active right before this one started,
-      // instead of just turning off. Falls back to off if nothing was active.
-      // Guarded so a timer that fires while the user has already moved on to
-      // another button can't race that transition and kill its lights (this
-      // used to call deactivateScene directly, unguarded by
-      // transitionInProgress, which could turn a freshly-started scene back
-      // off moments after it started).
+      // One lap and done — see scheduleAutoStop.
       if (scene.cycles) {
-        meteorAutoStopTimer = setTimeout(async () => {
-          meteorAutoStopTimer = null;
-          if (transitionInProgress || activeScene !== sceneId) return;
-          transitionInProgress = true;
-          try {
-            if (revertToSceneId && scenes[revertToSceneId]) {
-              await deactivateScene(sceneId, true); // switching=true: skip lifxOff, the revert below sets the real end state
-              await activateScene(revertToSceneId);
-            } else {
-              await deactivateScene(sceneId, false);
-            }
-          } finally {
-            transitionInProgress = false;
-          }
-        }, (scene.period - (scene.stopEarly || 0)) * 1000);
+        scheduleAutoStop(sceneId, revertToSceneId, scene.cycles * scene.period - (scene.stopEarly || 0));
       }
     }
     if (scene.light === 'flicker') {
@@ -1391,16 +1391,15 @@
       flickerInterval = setInterval(fireFlickerTick, scene.period * 1000);
     }
     if (scene.light === 'solid')  await Promise.all(selectors.map(sel => lifxSolid(sel, scene.color)));
-    if (scene.light === 'gradient') await Promise.all(selectors.map(sel => lifxGradient(sel, scene.palette)));
     if (scene.light === 'gradientSmooth') await Promise.all(selectors.map(sel => lifxGradientSmooth(sel, scene.stops)));
   }
 
-  async function deactivateScene(sceneId, switching = false, keepLightsOn = false) {
+  async function deactivateScene(sceneId, switching = false, keepLightsOn = false, keepAudioPlaying = false) {
     const scene = scenes[sceneId];
     const btn = document.getElementById(`btn-${sceneId}`);
     const overlay = document.getElementById('flashOverlay');
 
-    if (meteorAutoStopTimer) { clearTimeout(meteorAutoStopTimer); meteorAutoStopTimer = null; }
+    if (sceneAutoStopTimer) { clearTimeout(sceneAutoStopTimer); sceneAutoStopTimer = null; }
     if (flickerInterval) { clearInterval(flickerInterval); flickerInterval = null; }
 
     activeScene = null;
@@ -1408,9 +1407,13 @@
     overlay.classList.remove('active');
     btn.querySelector('.btn-sub').textContent = scene.label;
 
-    // Stop audio
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
+    // Stop audio — unless the caller wants it to ride out a bit longer past
+    // the light switch (see scheduleAutoStop's audioTailSeconds), in which
+    // case it schedules the actual stop itself.
+    if (!keepAudioPlaying) {
+      alarmAudio.pause();
+      alarmAudio.currentTime = 0;
+    }
 
     // Only call lifxOff if we are truly turning off (not switching to another
     // scene, and not a scene that wants to leave its lights as-is once it
