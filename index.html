@@ -28,6 +28,7 @@
 
   html, body {
     height: 100%;
+    height: 100dvh; /* excludes the iPad Safari toolbar, unlike 100vh */
     background: var(--panel);
     font-family: 'Barlow Condensed', sans-serif;
     overflow: hidden;
@@ -49,8 +50,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 16px;
-    gap: 12px;
+    padding: clamp(6px, 2vh, 16px);
+    gap: clamp(6px, 1.5vh, 12px);
   }
 
   /* ── Header ── */
@@ -122,13 +123,13 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 10px;
+    padding: clamp(6px, 1.2vh, 10px);
     background: var(--surface);
     border: 1px solid var(--amber);
     border-radius: 8px;
     color: var(--amber);
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
+    font-size: clamp(12px, 2vh, 16px);
     font-weight: 700;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -143,10 +144,11 @@
   /* ── Button Grid ── */
   .grid {
     flex: 1;
+    min-height: 0; /* let the grid actually shrink inside the flex column instead of overflowing it */
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: 1.5fr repeat(3, 1fr);
-    gap: 12px;
+    gap: clamp(6px, 1.5vh, 12px);
   }
 
   /* ── Control Button ── */
@@ -160,9 +162,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 20px;
+    gap: clamp(2px, 1.2vh, 10px);
+    padding: clamp(4px, 2vh, 20px);
     overflow: hidden;
+    min-height: 0;
+    min-width: 0;
     transition: transform 0.08s ease;
     -webkit-user-select: none;
     user-select: none;
@@ -194,7 +198,7 @@
   .ctrl-btn.alarm.firing::before { opacity: 1; }
 
   .ctrl-btn.alarm .btn-icon {
-    font-size: 48px;
+    font-size: clamp(22px, 6vh, 48px);
     line-height: 1;
     filter: drop-shadow(0 0 12px var(--red));
     transition: filter 0.1s;
@@ -205,7 +209,7 @@
   }
 
   .ctrl-btn.alarm .btn-label {
-    font-size: 20px;
+    font-size: clamp(12px, 2.5vh, 20px);
     font-weight: 900;
     letter-spacing: 0.05em;
     color: var(--red);
@@ -220,7 +224,7 @@
 
   .ctrl-btn.alarm .btn-sub {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: clamp(7px, 1.3vh, 11px);
     color: var(--red-dim);
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -254,7 +258,7 @@
   .ctrl-btn.lasers.firing::before { opacity: 1; }
 
   .ctrl-btn.lasers .btn-icon {
-    font-size: 48px;
+    font-size: clamp(22px, 6vh, 48px);
     line-height: 1;
     filter: drop-shadow(0 0 12px var(--green));
     transition: filter 0.1s;
@@ -265,7 +269,7 @@
   }
 
   .ctrl-btn.lasers .btn-label {
-    font-size: 20px;
+    font-size: clamp(12px, 2.5vh, 20px);
     font-weight: 900;
     letter-spacing: 0.05em;
     color: var(--green);
@@ -280,7 +284,7 @@
 
   .ctrl-btn.lasers .btn-sub {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: clamp(7px, 1.3vh, 11px);
     color: var(--green-dim);
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -314,7 +318,7 @@
   .ctrl-btn.shields.firing::before { opacity: 1; }
 
   .ctrl-btn.shields .btn-icon {
-    font-size: 48px;
+    font-size: clamp(22px, 6vh, 48px);
     line-height: 1;
     filter: drop-shadow(0 0 12px #4d9fff);
     transition: filter 0.1s;
@@ -325,7 +329,7 @@
   }
 
   .ctrl-btn.shields .btn-label {
-    font-size: 20px;
+    font-size: clamp(12px, 2.5vh, 20px);
     font-weight: 900;
     letter-spacing: 0.05em;
     color: #4d9fff;
@@ -340,7 +344,7 @@
 
   .ctrl-btn.shields .btn-sub {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: clamp(7px, 1.3vh, 11px);
     color: #003580;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -576,7 +580,7 @@
   .ctrl-btn.solid-white .btn-label  { color: #e0e0e0; text-shadow: 0 0 16px rgba(255,255,255,0.4); }
   .ctrl-btn.solid-blue .btn-label   { color: #4d9fff; text-shadow: 0 0 16px rgba(50,130,255,0.6); }
   .ctrl-btn.solid-green .btn-label  { color: #33ff88; text-shadow: 0 0 16px rgba(0,255,100,0.5); }
-  .ctrl-btn.planets-toggle .btn-icon { font-size: 56px; line-height: 1; }
+  .ctrl-btn.planets-toggle .btn-icon { font-size: clamp(26px, 7vh, 56px); line-height: 1; }
   .ctrl-btn.planets-toggle .btn-label { color: #b366ff; text-shadow: 0 0 16px rgba(155,48,255,0.6); font-weight: 900; }
   .ctrl-btn.solid-yellow .btn-label { color: #ffe066; text-shadow: 0 0 16px rgba(255,221,51,0.6); }
 
@@ -600,7 +604,7 @@
   .planet-only { display: none; }
   .grid.planets-mode .home-only { display: none; }
   .grid.planets-mode .planet-only { display: flex; }
-  .planet-only .btn-icon { font-size: 32px; line-height: 1; }
+  .planet-only .btn-icon { font-size: clamp(18px, 4vh, 32px); line-height: 1; }
 
   /* Planet theme buttons — same gradient-border technique and grid slots as
      the color/theme buttons they replace on the Planets screen. */
