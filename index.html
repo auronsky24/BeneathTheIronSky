@@ -602,20 +602,64 @@
 
   /* ── Planets mode toggle ── */
   .planet-only { display: none; }
+  .planet2-only { display: none; }
   .grid.planets-mode .home-only { display: none; }
   .grid.planets-mode .planet-only { display: flex; }
-  .planet-only .btn-icon { font-size: clamp(18px, 4vh, 32px); line-height: 1; }
+  /* Second Planets page (reached via the Next Page button) reuses the same
+     grid slots as the first — swap which set is shown rather than adding
+     new rows. Needs to come after the .planets-mode rule above so its
+     override wins the (equal-specificity) cascade. */
+  .grid.planets2-mode .planet-only { display: none; }
+  .grid.planets2-mode .planet2-only { display: flex; }
+  .planet-only .btn-icon, .planet2-only .btn-icon { font-size: clamp(18px, 4vh, 32px); line-height: 1; }
 
   /* Planet theme buttons — same gradient-border technique and grid slots as
      the color/theme buttons they replace on the Planets screen. */
-  .ctrl-btn.planet-vanguard     { --theme-gradient: linear-gradient(135deg, hsl(15,100%,65%), hsl(0,100%,67.5%), hsl(350,100%,72.5%)); grid-column: 1; grid-row: 2; }
-  .ctrl-btn.planet-carion-delta { --theme-gradient: linear-gradient(135deg, hsl(75,100%,72.5%), hsl(95,100%,77.5%), hsl(160,100%,80%)); grid-column: 2; grid-row: 2; }
+  .ctrl-btn.planet-vanguard     { border-color: hsl(0,100%,20%); grid-column: 1; grid-row: 2; }
+  .ctrl-btn.planet-vanguard::before   { background: radial-gradient(ellipse at center, hsla(0,100%,20%,0.3) 0%, transparent 70%); }
+  .ctrl-btn.planet-vanguard .btn-label { color: #f0f0f0; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
+  .ctrl-btn.planet-vanguard .btn-sub   { color: var(--text-dim); }
+  .ctrl-btn.planet-vanguard.active     { border-color: hsl(0,100%,20%); box-shadow: 0 0 18px hsla(0,100%,20%,0.4); }
+  .ctrl-btn.planet-carion-delta { --theme-gradient: linear-gradient(135deg, hsl(17,53%,65%), hsl(30,100%,65%), hsl(49,100%,65%)); grid-column: 2; grid-row: 2; }
   .ctrl-btn.planet-korrath      { --theme-gradient: linear-gradient(135deg, hsl(215,100%,65%), hsl(215,100%,82.5%), hsl(210,100%,97.5%)); grid-column: 3; grid-row: 2; }
-  .ctrl-btn.planet-meridia      { --theme-gradient: linear-gradient(135deg, hsl(45,100%,70%), hsl(38,100%,65%), hsl(50,100%,75%)); grid-column: 1; grid-row: 3; }
-  .ctrl-btn.planet-varis-prime  { --theme-gradient: linear-gradient(135deg, hsl(200,100%,70%), hsl(190,100%,65%), hsl(210,100%,75%)); grid-column: 2; grid-row: 3; }
-  .ctrl-btn.planet-draxus       { --theme-gradient: linear-gradient(135deg, hsl(340,100%,65%), hsl(320,100%,70%), hsl(0,100%,67.5%)); grid-column: 3; grid-row: 3; }
-  .ctrl-btn.planet-crucible     { --theme-gradient: linear-gradient(135deg, hsl(25,100%,57.5%), hsl(35,100%,55%), hsl(10,100%,60%)); grid-column: 2; grid-row: 4; }
-  .ctrl-btn.planet-tbd          { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 4; }
+  .ctrl-btn.planet-meridia      { --theme-gradient: linear-gradient(135deg, hsl(83,60%,65%), hsl(121,100%,65%), hsl(174,100%,65%)); grid-column: 1; grid-row: 3; }
+  .ctrl-btn.planet-varis-prime  { --theme-gradient: linear-gradient(135deg, hsl(264,70%,65%), hsl(136,53%,65%), hsl(302,66%,65%)); grid-column: 2; grid-row: 3; }
+  .ctrl-btn.planet-draxus       { --theme-gradient: linear-gradient(135deg, hsl(35,100%,65%), hsl(36,70%,65%), hsl(10,100%,65%)); grid-column: 3; grid-row: 3; }
+  .ctrl-btn.planet-crucible     { --theme-gradient: linear-gradient(135deg, hsl(182,100%,65%), hsl(207,100%,65%), hsl(241,60%,65%)); grid-column: 2; grid-row: 4; }
+
+  /* Next Page — takes over TBD's old slot. Not a scene: pure navigation to
+     the second Planets page, styled like the Planets toggle button (flat
+     accent color) instead of a themed gradient since it doesn't control
+     any lights. */
+  .ctrl-btn.next-page-toggle { border-color: #006666; grid-column: 3; grid-row: 4; }
+  .ctrl-btn.next-page-toggle::before { background: radial-gradient(ellipse at center, rgba(0,229,229,0.3) 0%, transparent 70%); }
+  .ctrl-btn.next-page-toggle .btn-icon { font-size: clamp(26px, 7vh, 56px); line-height: 1; }
+  .ctrl-btn.next-page-toggle .btn-label { color: #00e5e5; text-shadow: 0 0 16px rgba(0,229,229,0.6); font-weight: 900; }
+  .ctrl-btn.next-page-toggle .btn-sub { color: #009999; }
+
+  /* Second Planets page — same technique/slots as the first page's planet
+     buttons, just swapped in via .planet2-only instead of .planet-only. */
+  .ctrl-btn.planet2-temple  { --theme-gradient: linear-gradient(135deg, hsl(327,42%,65%), hsl(224,33%,65%), hsl(88,44%,65%)); grid-column: 1; grid-row: 2; }
+  /* Shadow, Began, Lara, Alana, and Phantom don't have real palettes yet —
+     reusing the original TBD placeholder gradient until they're picked. */
+  /* Solid color, not a gradient — switches instantly instead of painting
+     zone-by-zone. HSB(265,100%,55%) — CSS lightness is not the same axis
+     as LIFX brightness, see the Vanguard button for the same conversion. */
+  .ctrl-btn.planet2-shadow             { border-color: hsl(265,100%,27.5%); grid-column: 2; grid-row: 2; }
+  .ctrl-btn.planet2-shadow::before     { background: radial-gradient(ellipse at center, hsla(265,100%,27.5%,0.3) 0%, transparent 70%); }
+  .ctrl-btn.planet2-shadow .btn-label  { color: #f0f0f0; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
+  .ctrl-btn.planet2-shadow .btn-sub    { color: var(--text-dim); }
+  .ctrl-btn.planet2-shadow.active      { border-color: hsl(265,100%,27.5%); box-shadow: 0 0 18px hsla(265,100%,27.5%,0.4); }
+  .ctrl-btn.planet2-began   { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 2; }
+  .ctrl-btn.planet2-lara    { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 1; grid-row: 3; }
+  .ctrl-btn.planet2-alana   { --theme-gradient: linear-gradient(135deg, hsl(105,100%,65%), hsl(72,100%,65%), hsl(44,100%,65%)); grid-column: 2; grid-row: 3; }
+  .ctrl-btn.planet2-phantom { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 3; }
+  /* Confronting the Captain of the Guard shares the Crucible's palette —
+     same location, same LIFX scene (see the "captainOfTheGuard" scene
+     definition, which mirrors "crucible" exactly). */
+  .ctrl-btn.planet2-captain { --theme-gradient: linear-gradient(135deg, hsl(182,100%,65%), hsl(207,100%,65%), hsl(241,60%,65%)); grid-column: 2; grid-row: 4; }
+  /* Czerka Outbreak doesn't have a real palette yet — placeholder gradient. */
+  .ctrl-btn.planet2-czerka  { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 4; }
 
   /* ── Animations ── */
   @keyframes iconPulse {
@@ -739,8 +783,8 @@
          visible on both screens (no home-only/planet-only class) since it's
          the way back. -->
     <button class="ctrl-btn planets-toggle" id="btn-planets-toggle" onclick="togglePlanetsMode()">
-      <div class="btn-icon">🪐</div>
-      <div class="btn-label">PLANETS</div>
+      <div class="btn-icon">📖</div>
+      <div class="btn-label">SCENES BY CHAPTER</div>
       <div class="btn-sub">TAP TO EXPLORE</div>
     </button>
 
@@ -773,59 +817,117 @@
     </button>
 
     <!-- PLANET: THE VANGUARD (replaces Red's slot) -->
-    <button class="ctrl-btn scene-btn theme-btn planet-only planet-vanguard" id="btn-vanguard" data-scene="vanguard" ontouchstart="handleScene(event, 'vanguard')" onclick="handleScene(event, 'vanguard')">
+    <button class="ctrl-btn scene-btn planet-only planet-vanguard" id="btn-vanguard" data-scene="vanguard" ontouchstart="handleScene(event, 'vanguard')" onclick="handleScene(event, 'vanguard')">
       <div class="btn-icon">🚀</div>
-      <div class="btn-label">THE VANGUARD</div>
-      <div class="btn-sub">PLANET · THE VANGUARD</div>
+      <div class="btn-label">CH 1-2: THE VANGUARD</div>
+      <div class="btn-sub">LOCATION · THE VANGUARD ALLIANCE SHIP</div>
     </button>
 
     <!-- PLANET: CARION DELTA (replaces White's slot) -->
-    <button class="ctrl-btn scene-btn theme-btn planet-only planet-carion-delta" id="btn-carion-delta" data-scene="carionDelta" ontouchstart="handleScene(event, 'carionDelta')" onclick="handleScene(event, 'carionDelta')">
+    <button class="ctrl-btn scene-btn theme-btn planet-only planet-carion-delta" id="btn-carionDelta" data-scene="carionDelta" ontouchstart="handleScene(event, 'carionDelta')" onclick="handleScene(event, 'carionDelta')">
       <div class="btn-icon">🛰️</div>
-      <div class="btn-label">CARION DELTA</div>
-      <div class="btn-sub">PLANET · CARION DELTA</div>
+      <div class="btn-label">CH 3: THE CREW OF THE HORIZON'S EDGE / ALLIANCE SECRET BASE</div>
+      <div class="btn-sub">LOCATION · CARION DELTA / SECRET ALLIANCE BASE</div>
     </button>
 
     <!-- PLANET: KORRATH (replaces Mellow's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-korrath" id="btn-korrath" data-scene="korrath" ontouchstart="handleScene(event, 'korrath')" onclick="handleScene(event, 'korrath')">
       <div class="btn-icon">❄️</div>
-      <div class="btn-label">KORRATH</div>
-      <div class="btn-sub">PLANET · KORRATH</div>
+      <div class="btn-label">CH 4: THE ORDER OF VEILED SIGHT</div>
+      <div class="btn-sub">LOCATION · KORRATH</div>
     </button>
 
     <!-- PLANET: MERIDIA (replaces Blue's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-meridia" id="btn-meridia" data-scene="meridia" ontouchstart="handleScene(event, 'meridia')" onclick="handleScene(event, 'meridia')">
       <div class="btn-icon">☀️</div>
-      <div class="btn-label">MERIDIA</div>
-      <div class="btn-sub">PLANET · MERIDIA</div>
+      <div class="btn-label">CH 5: MERIDIA</div>
+      <div class="btn-sub">LOCATION · MERIDIA</div>
     </button>
 
     <!-- PLANET: VARIS PRIME (replaces Green's slot) -->
-    <button class="ctrl-btn scene-btn theme-btn planet-only planet-varis-prime" id="btn-varis-prime" data-scene="varisPrime" ontouchstart="handleScene(event, 'varisPrime')" onclick="handleScene(event, 'varisPrime')">
+    <button class="ctrl-btn scene-btn theme-btn planet-only planet-varis-prime" id="btn-varisPrime" data-scene="varisPrime" ontouchstart="handleScene(event, 'varisPrime')" onclick="handleScene(event, 'varisPrime')">
       <div class="btn-icon">🗼</div>
-      <div class="btn-label">VARIS PRIME</div>
-      <div class="btn-sub">PLANET · VARIS PRIME</div>
+      <div class="btn-label">CH 6: VARIS PRIME</div>
+      <div class="btn-sub">LOCATION · VARIS PRIME</div>
     </button>
 
     <!-- PLANET: DRAXUS (replaces Tranquil's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-draxus" id="btn-draxus" data-scene="draxus" ontouchstart="handleScene(event, 'draxus')" onclick="handleScene(event, 'draxus')">
       <div class="btn-icon">🥷</div>
-      <div class="btn-label">DRAXUS</div>
-      <div class="btn-sub">PLANET · DRAXUS</div>
+      <div class="btn-label">CH 7: DRAXUS</div>
+      <div class="btn-sub">LOCATION · DRAXUS</div>
     </button>
 
     <!-- PLANET: THE CRUCIBLE (replaces Yellow's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-crucible" id="btn-crucible" data-scene="crucible" ontouchstart="handleScene(event, 'crucible')" onclick="handleScene(event, 'crucible')">
       <div class="btn-icon">🌑</div>
-      <div class="btn-label">THE CRUCIBLE</div>
-      <div class="btn-sub">PLANET · THE CRUCIBLE</div>
+      <div class="btn-label">CH 8: THE CRUCIBLE RAID</div>
+      <div class="btn-sub">LOCATION · MOTH TARKEN / THE CRUCIBLE BASE</div>
     </button>
 
-    <!-- PLANET: TBD (replaces Energizing's slot) -->
-    <button class="ctrl-btn scene-btn theme-btn planet-only planet-tbd" id="btn-tbd" data-scene="tbd" ontouchstart="handleScene(event, 'tbd')" onclick="handleScene(event, 'tbd')">
+    <!-- NEXT PAGE (replaces Energizing's slot, was PLANET: TBD) -->
+    <button class="ctrl-btn planet-only next-page-toggle" id="btn-next-page" onclick="goToPlanetsPage2()">
+      <div class="btn-icon">➡️</div>
+      <div class="btn-label">NEXT PAGE</div>
+      <div class="btn-sub">MORE CHAPTERS</div>
+    </button>
+
+    <!-- ── Planets page 2 — same grid slots as page 1, shown via .planet2-only ── -->
+
+    <!-- PLANET 10: THE TEMPLE OF THE FIRST LIGHT -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-temple" id="btn-templeOfFirstLight" data-scene="templeOfFirstLight" ontouchstart="handleScene(event, 'templeOfFirstLight')" onclick="handleScene(event, 'templeOfFirstLight')">
       <div class="btn-icon">🛕</div>
-      <div class="btn-label">TBD</div>
-      <div class="btn-sub">PLANET · TBD</div>
+      <div class="btn-label">10: THE TEMPLE OF THE FIRST LIGHT</div>
+      <div class="btn-sub">LOCATION · THE ZAYLON NEBULA / TEMPLE OF THE FIRST LIGHT</div>
+    </button>
+
+    <!-- PLANET 11: THE SHADOW OF THE IRON LEGION -->
+    <button class="ctrl-btn scene-btn planet2-only planet2-shadow" id="btn-shadowOfIronLegion" data-scene="shadowOfIronLegion" ontouchstart="handleScene(event, 'shadowOfIronLegion')" onclick="handleScene(event, 'shadowOfIronLegion')">
+      <div class="btn-icon">⚔️</div>
+      <div class="btn-label">11: THE SHADOW OF THE IRON LEGION</div>
+      <div class="btn-sub">LOCATION · AXION NEBULA / IRON LEGION COMMAND CENTER</div>
+    </button>
+
+    <!-- PLANET 12: WHERE IT ALL BEGAN -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-began" id="btn-whereItAllBegan" data-scene="whereItAllBegan" ontouchstart="handleScene(event, 'whereItAllBegan')" onclick="handleScene(event, 'whereItAllBegan')">
+      <div class="btn-icon">✨</div>
+      <div class="btn-label">12: WHERE IT ALL BEGAN</div>
+      <div class="btn-sub">LOCATION · TBD</div>
+    </button>
+
+    <!-- PLANET 9.1: THE LARA PROTOCOL -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-lara" id="btn-laraProtocol" data-scene="laraProtocol" ontouchstart="handleScene(event, 'laraProtocol')" onclick="handleScene(event, 'laraProtocol')">
+      <div class="btn-icon">🤖</div>
+      <div class="btn-label">9.1: THE LARA PROTOCOL</div>
+      <div class="btn-sub">LOCATION · SECTOR V-13 / MOON OF ENDARE</div>
+    </button>
+
+    <!-- PLANET 9.2: RESCUING ALANA PARKER -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-alana" id="btn-rescuingAlanaParker" data-scene="rescuingAlanaParker" ontouchstart="handleScene(event, 'rescuingAlanaParker')" onclick="handleScene(event, 'rescuingAlanaParker')">
+      <div class="btn-icon">🆘</div>
+      <div class="btn-label">9.2: RESCUING ALANA PARKER</div>
+      <div class="btn-sub">LOCATION · KRESH-TOR / THE SCAR</div>
+    </button>
+
+    <!-- PLANET 9.3: THE PHANTOM DRIVE -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-phantom" id="btn-thePhantomDrive" data-scene="thePhantomDrive" ontouchstart="handleScene(event, 'thePhantomDrive')" onclick="handleScene(event, 'thePhantomDrive')">
+      <div class="btn-icon">👻</div>
+      <div class="btn-label">9.3: THE PHANTOM DRIVE</div>
+      <div class="btn-sub">LOCATION · THE DRAYDEN NEBULA / SOLIS MAREN STATION</div>
+    </button>
+
+    <!-- PLANET 9.4: CONFRONTING THE CAPTAIN OF THE GUARD -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-captain" id="btn-captainOfTheGuard" data-scene="captainOfTheGuard" ontouchstart="handleScene(event, 'captainOfTheGuard')" onclick="handleScene(event, 'captainOfTheGuard')">
+      <div class="btn-icon">🗡️</div>
+      <div class="btn-label">9.4: CONFRONTING THE CAPTAIN OF THE GUARD</div>
+      <div class="btn-sub">LOCATION · MOTH TARKEN / THE CRUCIBLE BASE</div>
+    </button>
+
+    <!-- PLANET 9.5: THE CZERKA OUTBREAK -->
+    <button class="ctrl-btn scene-btn theme-btn planet2-only planet2-czerka" id="btn-czerkaOutbreak" data-scene="czerkaOutbreak" ontouchstart="handleScene(event, 'czerkaOutbreak')" onclick="handleScene(event, 'czerkaOutbreak')">
+      <div class="btn-icon">🦠</div>
+      <div class="btn-label">9.5: THE CZERKA OUTBREAK</div>
+      <div class="btn-sub">LOCATION · RHYDON NEBULA / CZERKA BIO-TECH STATION (OUTPOST 4)</div>
     </button>
 
   </div>
@@ -916,6 +1018,13 @@
     }
   }
   alarmAudio.addEventListener('ended', stopSceneForAudio);
+
+  // Zone-based effects (the "morph" effect only works on Tile/Candle matrix
+  // devices, not linear strips like this one — so gradients are painted by
+  // splitting the strip's actual zones and setting each band directly).
+  // Declared here, ahead of the Init section's prefetch call below, since
+  // that call needs it already initialized.
+  const zoneCountCache = {};
 
   // ── Init ──
   updateStatusDot();
@@ -1047,21 +1156,21 @@
     // ── Planet themes — shown on the Planets screen instead of the solid
     // colors and Mellow/Tranquil/Energizing. Same gradientSmooth engine.
     vanguard: {
-      label:     'PLANET · THE VANGUARD',
+      label:     'LOCATION · THE VANGUARD ALLIANCE SHIP',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradientSmooth',
-      stops:     [{ hue: 15, saturation: 70 }, { hue: 0, saturation: 65 }, { hue: 350, saturation: 55 }],
+      light:     'solid',
+      color:     'red saturation:1.0 brightness:0.4',
     },
     carionDelta: {
-      label:     'PLANET · CARION DELTA',
+      label:     'LOCATION · CARION DELTA / SECRET ALLIANCE BASE',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 75, saturation: 55 }, { hue: 95, saturation: 45 }, { hue: 160, saturation: 40 }],
+      stops:     [{ hue: 17, saturation: 53 }, { hue: 30, saturation: 100 }, { hue: 49, saturation: 100 }],
     },
     korrath: {
-      label:     'PLANET · KORRATH',
+      label:     'LOCATION · KORRATH',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
@@ -1069,35 +1178,92 @@
       stops:     [{ hue: 215, saturation: 70 }, { hue: 215, saturation: 35 }, { hue: 210, saturation: 5 }],
     },
     meridia: {
-      label:     'PLANET · MERIDIA',
+      label:     'LOCATION · MERIDIA',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 45, saturation: 60 }, { hue: 38, saturation: 70 }, { hue: 50, saturation: 50 }],
+      stops:     [{ hue: 83, saturation: 60 }, { hue: 121, saturation: 100 }, { hue: 174, saturation: 100 }],
     },
     varisPrime: {
-      label:     'PLANET · VARIS PRIME',
+      label:     'LOCATION · VARIS PRIME',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 200, saturation: 60 }, { hue: 190, saturation: 70 }, { hue: 210, saturation: 50 }],
+      stops:     [{ hue: 264, saturation: 70 }, { hue: 136, saturation: 53 }, { hue: 302, saturation: 66 }],
     },
     draxus: {
-      label:     'PLANET · DRAXUS',
+      label:     'LOCATION · DRAXUS',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 340, saturation: 70 }, { hue: 320, saturation: 60 }, { hue: 0, saturation: 65 }],
+      stops:     [{ hue: 35, saturation: 100 }, { hue: 36, saturation: 70 }, { hue: 10, saturation: 100 }],
     },
     crucible: {
-      label:     'PLANET · THE CRUCIBLE',
+      label:     'LOCATION · MOTH TARKEN / THE CRUCIBLE BASE',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 25, saturation: 85 }, { hue: 35, saturation: 90 }, { hue: 10, saturation: 80 }],
+      stops:     [{ hue: 182, saturation: 100 }, { hue: 207, saturation: 100 }, { hue: 241, saturation: 60 }],
     },
-    tbd: {
-      label:     'PLANET · TBD',
+
+    // ── Planets page 2 — reached via the Next Page button. Same
+    // gradientSmooth engine as page 1's planets.
+    templeOfFirstLight: {
+      label:     'LOCATION · THE ZAYLON NEBULA / TEMPLE OF THE FIRST LIGHT',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 327, saturation: 42 }, { hue: 224, saturation: 33 }, { hue: 88, saturation: 44 }],
+    },
+    // Shadow, Began, Lara, and Phantom don't have real palettes yet —
+    // reusing the original TBD placeholder gradient until they're picked.
+    shadowOfIronLegion: {
+      label:     'LOCATION · AXION NEBULA / IRON LEGION COMMAND CENTER',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'solid',
+      color:     'hue:265 saturation:1.0 brightness:0.55',
+    },
+    whereItAllBegan: {
+      label:     'LOCATION · TBD',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+    },
+    laraProtocol: {
+      label:     'LOCATION · SECTOR V-13 / MOON OF ENDARE',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+    },
+    rescuingAlanaParker: {
+      label:     'LOCATION · KRESH-TOR / THE SCAR',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 105, saturation: 100 }, { hue: 72, saturation: 100 }, { hue: 44, saturation: 100 }],
+    },
+    thePhantomDrive: {
+      label:     'LOCATION · THE DRAYDEN NEBULA / SOLIS MAREN STATION',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+    },
+    // Same location and same palette/scene as "crucible" above — this is a
+    // different chapter set at the same place, not a new gradient.
+    captainOfTheGuard: {
+      label:     'LOCATION · MOTH TARKEN / THE CRUCIBLE BASE',
+      playAudio: false,
+      audioSrc:  '',
+      light:     'gradientSmooth',
+      stops:     [{ hue: 182, saturation: 100 }, { hue: 207, saturation: 100 }, { hue: 241, saturation: 60 }],
+    },
+    // Placeholder gradient — real palette TBD.
+    czerkaOutbreak: {
+      label:     'LOCATION · RHYDON NEBULA / CZERKA BIO-TECH STATION (OUTPOST 4)',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
@@ -1122,13 +1288,13 @@
     // reset the strip can come back "on" but stuck invisible at brightness 0
     // if a meteor ran at any point before. Always start a strobe from a
     // known-good baseline, awaited before the pulse call so it can't race it.
-    // Pinning kelvin explicitly (not just brightness) matters here too: if an
-    // effect gets cancelled and the device falls back to showing this
-    // baseline instead of the pulse color, we want that fallback to be a
-    // known-good white, not whatever kelvin the device happened to drift to.
+    // Pinned to the strobe's own color (not white) so that this baseline —
+    // and the persist:false pulse falling back to it, whether cancelled
+    // mid-flight or finishing its cycles before the JS-side revert lands —
+    // reads as "the strobe" rather than a stray white flash before/after it.
     await fetch(`https://api.lifx.com/v1/lights/${selector}/state`, {
       method: 'PUT', headers,
-      body: JSON.stringify({ color: 'kelvin:9000 brightness:1.0', power: 'on', duration: 0 })
+      body: JSON.stringify({ color: `${color} brightness:1.0`, power: 'on', duration: 0 })
     }).catch(() => null);
 
     const pulseRes = await fetch(`https://api.lifx.com/v1/lights/${selector}/effects/pulse`, {
@@ -1155,11 +1321,6 @@
       showToast(`LIFX ERROR: ${e.error || 'PULSE FAILED'}`, 'error');
     }
   }
-
-  // Zone-based effects (the "morph" effect only works on Tile/Candle matrix
-  // devices, not linear strips like this one — so gradients are painted by
-  // splitting the strip's actual zones and setting each band directly).
-  const zoneCountCache = {};
 
   // Cached so the first press of a zone-based effect doesn't have to wait on
   // this lookup — see the prefetch call in Init below.
@@ -1412,16 +1573,49 @@
   // Swaps the solid-color/theme buttons for the planet buttons (and back) —
   // pure UI navigation, not a scene, so it doesn't touch the lights or
   // transitionInProgress at all. Whatever scene was active keeps running
-  // underneath even if its button gets hidden by the swap.
+  // underneath even if its button gets hidden by the swap. Three states:
+  // Home, Planets page 1 (planetsMode), Planets page 2 (+ planets2Mode).
+  // The toggle button steps back one level at a time — Home ← page 1 ←
+  // page 2 — rather than always jumping straight home.
   let planetsMode = false;
-  function togglePlanetsMode() {
-    planetsMode = !planetsMode;
-    document.querySelector('.grid').classList.toggle('planets-mode', planetsMode);
+  let planets2Mode = false;
+
+  function updatePlanetsToggleButton() {
+    const grid = document.querySelector('.grid');
+    grid.classList.toggle('planets-mode', planetsMode);
+    grid.classList.toggle('planets2-mode', planets2Mode);
     const btn = document.getElementById('btn-planets-toggle');
     btn.classList.toggle('active', planetsMode);
-    btn.querySelector('.btn-icon').textContent = planetsMode ? '🏠' : '🪐';
-    btn.querySelector('.btn-label').textContent = planetsMode ? 'BACK TO HOME' : 'PLANETS';
-    btn.querySelector('.btn-sub').textContent = planetsMode ? 'TAP TO RETURN' : 'TAP TO EXPLORE';
+    if (planets2Mode) {
+      btn.querySelector('.btn-icon').textContent = '⬅️';
+      btn.querySelector('.btn-label').textContent = 'BACK';
+      btn.querySelector('.btn-sub').textContent = 'TAP TO GO BACK';
+    } else if (planetsMode) {
+      btn.querySelector('.btn-icon').textContent = '🏠';
+      btn.querySelector('.btn-label').textContent = 'BACK TO HOME';
+      btn.querySelector('.btn-sub').textContent = 'TAP TO RETURN';
+    } else {
+      btn.querySelector('.btn-icon').textContent = '📖';
+      btn.querySelector('.btn-label').textContent = 'SCENES BY CHAPTER';
+      btn.querySelector('.btn-sub').textContent = 'TAP TO EXPLORE';
+    }
+  }
+
+  function togglePlanetsMode() {
+    if (planets2Mode) {
+      // Step back from page 2 to page 1 — not all the way home.
+      planets2Mode = false;
+    } else {
+      planetsMode = !planetsMode;
+    }
+    updatePlanetsToggleButton();
+  }
+
+  // Advances from the first Planets page to the second (Next Page button) —
+  // same kind of pure UI navigation as togglePlanetsMode.
+  function goToPlanetsPage2() {
+    planets2Mode = true;
+    updatePlanetsToggleButton();
   }
 
   // Manual escape hatch for when a scene leaves the lights in a bad state:
