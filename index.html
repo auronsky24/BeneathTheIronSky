@@ -383,9 +383,20 @@
 
   .ctrl-btn.theme-btn.active { box-shadow: 0 0 18px rgba(255,255,255,0.25); }
 
-  .ctrl-btn.theme-mellow     { --theme-gradient: linear-gradient(135deg, hsl(235,100%,67%), hsl(284,100%,67%), hsl(329,100%,67%)); grid-column: 3; grid-row: 2; }
-  .ctrl-btn.theme-tranquil   { --theme-gradient: linear-gradient(135deg, hsl(236,100%,80.5%), hsl(125,100%,80.5%), hsl(11,100%,80.5%)); grid-column: 3; grid-row: 3; }
-  .ctrl-btn.theme-energizing { --theme-gradient: linear-gradient(135deg, hsl(210,100%,65.5%), hsl(157,100%,65%), hsl(124,100%,66%)); grid-column: 3; grid-row: 4; }
+  .ctrl-btn.theme-rainbow { --theme-gradient: linear-gradient(135deg, hsl(319,86%,65%), hsl(210,86%,65%), hsl(98,86%,65%)); grid-column: 3; grid-row: 4; }
+
+  /* Orange and Purple: plain solid-color buttons (no gradient border) in the
+     slots the Mellow and Tranquil themes used to occupy. */
+  .ctrl-btn.solid-orange { border-color: #a34a00; grid-column: 3; grid-row: 2; }
+  .ctrl-btn.solid-purple { border-color: #4b0082; grid-column: 3; grid-row: 3; }
+  .ctrl-btn.solid-orange::before { background: radial-gradient(ellipse at center, rgba(255,140,0,0.3) 0%, transparent 70%); }
+  .ctrl-btn.solid-purple::before { background: radial-gradient(ellipse at center, rgba(160,60,255,0.3) 0%, transparent 70%); }
+  .ctrl-btn.solid-orange .btn-label { color: #ff9d3c; text-shadow: 0 0 16px rgba(255,140,0,0.6); }
+  .ctrl-btn.solid-purple .btn-label { color: #b366ff; text-shadow: 0 0 16px rgba(155,48,255,0.6); }
+  .ctrl-btn.solid-orange .btn-sub { color: #a34a00; }
+  .ctrl-btn.solid-purple .btn-sub { color: #4b0082; }
+  .ctrl-btn.solid-orange.active { border-color: #ff9d3c; box-shadow: 0 0 18px rgba(255,140,0,0.4); }
+  .ctrl-btn.solid-purple.active { border-color: #b366ff; box-shadow: 0 0 18px rgba(155,48,255,0.4); }
 
   /* Empty/placeholder buttons */
   .ctrl-btn.empty {
@@ -566,7 +577,9 @@
   .ctrl-btn.solid-white  { border-color: #555;    grid-column: 2; grid-row: 2; }
   .ctrl-btn.solid-blue   { border-color: #003580; grid-column: 1; grid-row: 3; }
   .ctrl-btn.solid-green  { border-color: #004d1a; grid-column: 2; grid-row: 3; }
-  .ctrl-btn.planets-toggle { border-color: #4b0082; grid-column: 1; grid-row: 4; }
+  /* Same border color in the resting "SCENES BY CHAPTER" state as in the
+     "BACK TO HOME" state (.active, below). */
+  .ctrl-btn.planets-toggle { border-color: #b366ff; grid-column: 1; grid-row: 4; }
   .ctrl-btn.solid-yellow { border-color: #806600; grid-column: 2; grid-row: 4; }
 
   .ctrl-btn.solid-red::before    { background: radial-gradient(ellipse at center, rgba(255,26,26,0.3) 0%, transparent 70%); }
@@ -639,9 +652,9 @@
 
   /* Second Planets page — same technique/slots as the first page's planet
      buttons, just swapped in via .planet2-only instead of .planet-only. */
-  .ctrl-btn.planet2-temple  { --theme-gradient: linear-gradient(135deg, hsl(327,42%,65%), hsl(224,33%,65%), hsl(88,44%,65%)); grid-column: 1; grid-row: 2; }
-  /* Shadow, Began, Lara, Alana, and Phantom don't have real palettes yet —
-     reusing the original TBD placeholder gradient until they're picked. */
+  /* Border uses the original vibrant Tranquil-theme button gradient (that
+     theme is now the solid Purple button), not the desaturated scene stops. */
+  .ctrl-btn.planet2-temple  { --theme-gradient: linear-gradient(135deg, hsl(236,100%,80.5%), hsl(125,100%,80.5%), hsl(11,100%,80.5%)); grid-column: 1; grid-row: 2; }
   /* Solid color, not a gradient — switches instantly instead of painting
      zone-by-zone. HSB(265,100%,55%) — CSS lightness is not the same axis
      as LIFX brightness, see the Vanguard button for the same conversion. */
@@ -650,16 +663,20 @@
   .ctrl-btn.planet2-shadow .btn-label  { color: #f0f0f0; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
   .ctrl-btn.planet2-shadow .btn-sub    { color: var(--text-dim); }
   .ctrl-btn.planet2-shadow.active      { border-color: hsl(265,100%,27.5%); box-shadow: 0 0 18px hsla(265,100%,27.5%,0.4); }
-  .ctrl-btn.planet2-began   { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 2; }
-  .ctrl-btn.planet2-lara    { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 1; grid-row: 3; }
-  .ctrl-btn.planet2-alana   { --theme-gradient: linear-gradient(135deg, hsl(105,100%,65%), hsl(72,100%,65%), hsl(44,100%,65%)); grid-column: 2; grid-row: 3; }
-  .ctrl-btn.planet2-phantom { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 3; }
+  /* Border copied from the CH 3 (Carion Delta) button. */
+  .ctrl-btn.planet2-began   { --theme-gradient: linear-gradient(135deg, hsl(17,53%,65%), hsl(30,100%,65%), hsl(49,100%,65%)); grid-column: 3; grid-row: 2; }
+  /* Border is the original Energizing-theme palette (that theme has since been
+     reworked into "Rainbow" with different colors). */
+  .ctrl-btn.planet2-lara    { --theme-gradient: linear-gradient(135deg, hsl(210,100%,65.5%), hsl(157,100%,65%), hsl(124,100%,66%)); grid-column: 1; grid-row: 3; }
+  .ctrl-btn.planet2-alana   { --theme-gradient: linear-gradient(135deg, hsl(52,100%,65%), hsl(25,100%,65%), hsl(355,100%,65%)); grid-column: 2; grid-row: 3; }
+  /* Border is the original Mellow-theme button gradient (that theme is now the solid Orange button). */
+  .ctrl-btn.planet2-phantom { --theme-gradient: linear-gradient(135deg, hsl(235,100%,67%), hsl(284,100%,67%), hsl(329,100%,67%)); grid-column: 3; grid-row: 3; }
   /* Confronting the Captain of the Guard shares the Crucible's palette —
      same location, same LIFX scene (see the "captainOfTheGuard" scene
      definition, which mirrors "crucible" exactly). */
   .ctrl-btn.planet2-captain { --theme-gradient: linear-gradient(135deg, hsl(182,100%,65%), hsl(207,100%,65%), hsl(241,60%,65%)); grid-column: 2; grid-row: 4; }
-  /* Czerka Outbreak doesn't have a real palette yet — placeholder gradient. */
-  .ctrl-btn.planet2-czerka  { --theme-gradient: linear-gradient(135deg, hsl(260,100%,92.5%), hsl(270,100%,90%), hsl(250,100%,94%)); grid-column: 3; grid-row: 4; }
+  /* CH 9.2's original green palette (CH 9.2 has since been recolored). */
+  .ctrl-btn.planet2-czerka  { --theme-gradient: linear-gradient(135deg, hsl(105,100%,65%), hsl(72,100%,65%), hsl(44,100%,65%)); grid-column: 3; grid-row: 4; }
 
   /* ── Animations ── */
   @keyframes iconPulse {
@@ -795,25 +812,25 @@
       <div class="btn-sub">SOLID YELLOW</div>
     </button>
 
-    <!-- THEME: MELLOW -->
-    <button class="ctrl-btn scene-btn theme-btn theme-mellow home-only" id="btn-mellow" data-scene="mellow" ontouchstart="handleScene(event, 'mellow')" onclick="handleScene(event, 'mellow')">
-      <div class="btn-icon">🌙</div>
-      <div class="btn-label">MELLOW</div>
-      <div class="btn-sub">THEME · MELLOW</div>
+    <!-- SOLID ORANGE -->
+    <button class="ctrl-btn scene-btn solid-orange home-only" id="btn-orange" data-scene="orange" ontouchstart="handleScene(event, 'orange')" onclick="handleScene(event, 'orange')">
+      <div class="btn-icon">🟠</div>
+      <div class="btn-label">ORANGE</div>
+      <div class="btn-sub">SOLID ORANGE</div>
     </button>
 
-    <!-- THEME: TRANQUIL -->
-    <button class="ctrl-btn scene-btn theme-btn theme-tranquil home-only" id="btn-tranquil" data-scene="tranquil" ontouchstart="handleScene(event, 'tranquil')" onclick="handleScene(event, 'tranquil')">
-      <div class="btn-icon">🌊</div>
-      <div class="btn-label">TRANQUIL</div>
-      <div class="btn-sub">THEME · TRANQUIL</div>
+    <!-- SOLID PURPLE -->
+    <button class="ctrl-btn scene-btn solid-purple home-only" id="btn-purple" data-scene="purple" ontouchstart="handleScene(event, 'purple')" onclick="handleScene(event, 'purple')">
+      <div class="btn-icon">🟣</div>
+      <div class="btn-label">PURPLE</div>
+      <div class="btn-sub">SOLID PURPLE</div>
     </button>
 
-    <!-- THEME: ENERGIZING -->
-    <button class="ctrl-btn scene-btn theme-btn theme-energizing home-only" id="btn-energizing" data-scene="energizing" ontouchstart="handleScene(event, 'energizing')" onclick="handleScene(event, 'energizing')">
-      <div class="btn-icon">⚡</div>
-      <div class="btn-label">ENERGIZING</div>
-      <div class="btn-sub">THEME · ENERGIZING</div>
+    <!-- THEME: RAINBOW -->
+    <button class="ctrl-btn scene-btn theme-btn theme-rainbow home-only" id="btn-rainbow" data-scene="rainbow" ontouchstart="handleScene(event, 'rainbow')" onclick="handleScene(event, 'rainbow')">
+      <div class="btn-icon">🌈</div>
+      <div class="btn-label">RAINBOW</div>
+      <div class="btn-sub">THEME · RAINBOW</div>
     </button>
 
     <!-- PLANET: THE VANGUARD (replaces Red's slot) -->
@@ -830,7 +847,7 @@
       <div class="btn-sub">LOCATION · CARION DELTA / SECRET ALLIANCE BASE</div>
     </button>
 
-    <!-- PLANET: KORRATH (replaces Mellow's slot) -->
+    <!-- PLANET: KORRATH (replaces the Orange button's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-korrath" id="btn-korrath" data-scene="korrath" ontouchstart="handleScene(event, 'korrath')" onclick="handleScene(event, 'korrath')">
       <div class="btn-icon">❄️</div>
       <div class="btn-label">CH 4: THE ORDER OF VEILED SIGHT</div>
@@ -851,7 +868,7 @@
       <div class="btn-sub">LOCATION · VARIS PRIME</div>
     </button>
 
-    <!-- PLANET: DRAXUS (replaces Tranquil's slot) -->
+    <!-- PLANET: DRAXUS (replaces the Purple button's slot) -->
     <button class="ctrl-btn scene-btn theme-btn planet-only planet-draxus" id="btn-draxus" data-scene="draxus" ontouchstart="handleScene(event, 'draxus')" onclick="handleScene(event, 'draxus')">
       <div class="btn-icon">🥷</div>
       <div class="btn-label">CH 7: DRAXUS</div>
@@ -865,7 +882,7 @@
       <div class="btn-sub">LOCATION · MOTH TARKEN / THE CRUCIBLE BASE</div>
     </button>
 
-    <!-- NEXT PAGE (replaces Energizing's slot, was PLANET: TBD) -->
+    <!-- NEXT PAGE (replaces the Rainbow theme's slot, was PLANET: TBD) -->
     <button class="ctrl-btn planet-only next-page-toggle" id="btn-next-page" onclick="goToPlanetsPage2()">
       <div class="btn-icon">➡️</div>
       <div class="btn-label">NEXT PAGE</div>
@@ -1126,35 +1143,34 @@
       light:     'solid',
       color:     'yellow saturation:1.0 brightness:1.0',
     },
-    // LIFX's cloud API has no endpoint to activate a built-in Theme by name.
-    // Each theme paints a real static gradient across the strip's own zones
-    // using custom hue/saturation colors.
-    mellow: {
-      label:     'THEME · MELLOW',
+    // Plain solid colors — one write to the whole strip, so they switch
+    // instantly instead of painting zone-by-zone like the gradient scenes.
+    orange: {
+      label:     'SOLID ORANGE',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradientSmooth',
-      stops:     [{ hue: 235, saturation: 66 }, { hue: 284, saturation: 66 }, { hue: 329, saturation: 66 }],
+      light:     'solid',
+      color:     'orange saturation:1.0 brightness:1.0',
     },
-    tranquil: {
-      label:     'THEME · TRANQUIL',
+    purple: {
+      label:     'SOLID PURPLE',
       playAudio: false,
       audioSrc:  '',
-      light:     'gradientSmooth',
-      // Matches the LIFX app's Colors tab → Gradient style, Custom stops —
-      // smoothly blended per-zone rather than banded like the other themes.
-      stops:     [{ hue: 244, saturation: 30 }, { hue: 18, saturation: 30 }, { hue: 133, saturation: 30 }],
+      light:     'solid',
+      color:     'purple saturation:1.0 brightness:1.0',
     },
-    energizing: {
-      label:     'THEME · ENERGIZING',
+    // LIFX's cloud API has no endpoint to activate a built-in Theme by name, so
+    // this paints a real gradient across the strip's own zones with custom stops.
+    rainbow: {
+      label:     'THEME · RAINBOW',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 210, saturation: 69 }, { hue: 157, saturation: 70 }, { hue: 124, saturation: 68 }],
+      stops:     [{ hue: 319, saturation: 86 }, { hue: 210, saturation: 86 }, { hue: 98, saturation: 86 }],
     },
 
     // ── Planet themes — shown on the Planets screen instead of the solid
-    // colors and Mellow/Tranquil/Energizing. Same gradientSmooth engine.
+    // colors and the Rainbow theme. Same gradientSmooth engine.
     vanguard: {
       label:     'LOCATION · THE VANGUARD ALLIANCE SHIP',
       playAudio: false,
@@ -1213,10 +1229,9 @@
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 327, saturation: 42 }, { hue: 224, saturation: 33 }, { hue: 88, saturation: 44 }],
+      // The original Tranquil-theme palette (that theme is now the solid Purple button).
+      stops:     [{ hue: 244, saturation: 30 }, { hue: 18, saturation: 30 }, { hue: 133, saturation: 30 }],
     },
-    // Shadow, Began, Lara, and Phantom don't have real palettes yet —
-    // reusing the original TBD placeholder gradient until they're picked.
     shadowOfIronLegion: {
       label:     'LOCATION · AXION NEBULA / IRON LEGION COMMAND CENTER',
       playAudio: false,
@@ -1229,28 +1244,31 @@
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+      // Same palette as CH 3 (Carion Delta).
+      stops:     [{ hue: 17, saturation: 53 }, { hue: 30, saturation: 100 }, { hue: 49, saturation: 100 }],
     },
     laraProtocol: {
       label:     'LOCATION · SECTOR V-13 / MOON OF ENDARE',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+      // The original Energizing-theme palette (that theme is now "Rainbow" with different colors).
+      stops:     [{ hue: 210, saturation: 69 }, { hue: 157, saturation: 70 }, { hue: 124, saturation: 68 }],
     },
     rescuingAlanaParker: {
       label:     'LOCATION · KRESH-TOR / THE SCAR',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 105, saturation: 100 }, { hue: 72, saturation: 100 }, { hue: 44, saturation: 100 }],
+      stops:     [{ hue: 52, saturation: 100 }, { hue: 25, saturation: 100 }, { hue: 355, saturation: 100 }],
     },
     thePhantomDrive: {
       label:     'LOCATION · THE DRAYDEN NEBULA / SOLIS MAREN STATION',
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+      // The original Mellow-theme palette (that theme is now the solid Orange button).
+      stops:     [{ hue: 235, saturation: 66 }, { hue: 284, saturation: 66 }, { hue: 329, saturation: 66 }],
     },
     // Same location and same palette/scene as "crucible" above — this is a
     // different chapter set at the same place, not a new gradient.
@@ -1267,7 +1285,8 @@
       playAudio: false,
       audioSrc:  '',
       light:     'gradientSmooth',
-      stops:     [{ hue: 260, saturation: 15 }, { hue: 270, saturation: 20 }, { hue: 250, saturation: 12 }],
+      // CH 9.2's original green palette (CH 9.2 has since been recolored).
+      stops:     [{ hue: 105, saturation: 100 }, { hue: 72, saturation: 100 }, { hue: 44, saturation: 100 }],
     },
   };
 
@@ -1586,14 +1605,12 @@
     grid.classList.toggle('planets2-mode', planets2Mode);
     const btn = document.getElementById('btn-planets-toggle');
     btn.classList.toggle('active', planetsMode);
-    if (planets2Mode) {
+    if (planetsMode) {
+      // Both the page-2 ("back to home") and page-3 states show the same
+      // back-arrow button — each step just goes back one level.
       btn.querySelector('.btn-icon').textContent = '⬅️';
       btn.querySelector('.btn-label').textContent = 'BACK';
       btn.querySelector('.btn-sub').textContent = 'TAP TO GO BACK';
-    } else if (planetsMode) {
-      btn.querySelector('.btn-icon').textContent = '🏠';
-      btn.querySelector('.btn-label').textContent = 'BACK TO HOME';
-      btn.querySelector('.btn-sub').textContent = 'TAP TO RETURN';
     } else {
       btn.querySelector('.btn-icon').textContent = '📖';
       btn.querySelector('.btn-label').textContent = 'SCENES BY CHAPTER';
